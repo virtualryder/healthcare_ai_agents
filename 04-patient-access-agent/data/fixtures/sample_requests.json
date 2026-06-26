@@ -1,0 +1,16 @@
+[
+  {"request_id": "PA-1", "task_type": "schedule", "patient_ref": "PT-40012", "member_ref": "MBR-30551",
+   "service": "99214", "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "access-1", "custom:hpp_role": "PATIENT_ACCESS_REP"}},
+  {"request_id": "PA-2", "task_type": "benefits", "patient_ref": "PT-40012", "member_ref": "MBR-30551",
+   "service": "99214", "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "access-1", "custom:hpp_role": "PATIENT_ACCESS_REP"}},
+  {"request_id": "PA-3", "task_type": "schedule", "patient_ref": "PT-40012", "member_ref": "MBR-30551",
+   "service": "99214",
+   "acting_user_claims": {"sub": "access-1", "custom:hpp_role": "PATIENT_ACCESS_REP"}},
+  {"request_id": "PA-4", "task_type": "estimate", "service": "99214",
+   "acting_user_claims": {"sub": "access-1", "custom:hpp_role": "PATIENT_ACCESS_REP"}},
+  {"request_id": "PA-5", "task_type": "benefits", "patient_ref": "PT-40012", "member_ref": "MBR-INACTIVE",
+   "service": "99214", "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "access-1", "custom:hpp_role": "PATIENT_ACCESS_REP"}}
+]

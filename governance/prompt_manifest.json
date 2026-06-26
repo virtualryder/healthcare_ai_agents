@@ -24,6 +24,14 @@
     "03-clinical-administration.patient_comms": {
       "version": "1.0.0",
       "sha256": "562a02a40c12898b53556d1ea79176bb1ace17e09f490cd9a6fa2696910c40d2"
+    },
+    "04-patient-access.summary": {
+      "version": "1.0.0",
+      "sha256": "a37ed1a15925b70ceb9fb828e7e35a63a18894936895595af285705396271794"
+    },
+    "04-patient-access.benefits": {
+      "version": "1.0.0",
+      "sha256": "5f5331efa75e130fe24e7cdd840173862c3daf85ee0d064ad6eaaa54e2085a91"
     }
   }
 }

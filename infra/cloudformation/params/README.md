@@ -9,7 +9,8 @@ or data boundary.
 |---|---|---|
 | 01 Revenue-Cycle & Denial | `01-revenue-cycle-denial.json` | 10.30.0.0/16 (template default) |
 | 02 Prior-Authorization | `02-prior-authorization.json` | 10.31.0.0/16 (pass `VpcCidr`) |
-| 03–08 | add `0N-<name>.json` | 10.32.0.0/16 … |
+| 03 Clinical-Administration | `03-clinical-administration.json` | 10.32.0.0/16 |
+| 04–08 | add `0N-<name>.json` | 10.33.0.0/16 … |
 
 ```bash
 # Stamp out Agent 02 (same templates, different AgentId + CIDR):

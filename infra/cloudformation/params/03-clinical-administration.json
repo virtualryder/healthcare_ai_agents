@@ -1,0 +1,7 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "03-clinical-administration"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "10.32.0.0/16"}
+]

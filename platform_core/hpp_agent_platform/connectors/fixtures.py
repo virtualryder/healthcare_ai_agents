@@ -79,7 +79,10 @@ _CLEARINGHOUSE = {
 # ── Payer portal / X12 270/271/278/276/277 / Da Vinci ────────────────────────
 _PAYER = {
     "check_eligibility": lambda a: {"member_ref": a.get("member_ref", "MBR-30551"),
-                                    "x12": "271", "active": True, "plan": "BlueChoice PPO",
+                                    "x12": "271",
+                                    # an X12 271 may report inactive/terminated coverage
+                                    "active": a.get("member_ref", "MBR-30551") != "MBR-INACTIVE",
+                                    "plan": "BlueChoice PPO",
                                     "copay": 30.00, "deductible_remaining": 450.00},
     "check_pa_requirement": lambda a: {"service": a.get("service", "72148"),
                                        "pa_required": str(a.get("service", "72148")).upper()
