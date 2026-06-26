@@ -18,10 +18,11 @@
   CRD), evidence assembly, MCG/InterQual criteria evaluation, grounded rationale, framework-
   enforced HITL before submission, monitor/escalate, full test suite + 4-doc set + live runbook.
   `payer.issue_determination` withheld from all agents.
-- **Agents 03–08** — Documented: per-agent spec README and scaffold; build follows the 01/02 pattern.
+- **Agent 03 — Clinical-Administration** — built to reference depth: chart load (FHIR) + care plan, 42 CFR Part 2 consent gate, task-typed artifact (summary/visit-prep/referral/discharge/inbox), grounding + PHI + health-literacy checks, framework-enforced clinician sign-off gate, full test suite + 4-doc set + live runbook. `ehr.draft_note` is a gated draft; no order-entry/signing.
+- **Agents 04–08** — Documented: per-agent spec README and scaffold; build follows the 01/02/03 pattern.
 
 ## Test status
-`51 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
+`62 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
 installed; it passes when it is). All run with **no API key**.
 
 Each agent is an independent deployable (own top-level `agent`/`tools` packages), so the
@@ -31,6 +32,7 @@ platform_core/tests   — gateway authz/HITL, PHI masking, connectors      (16)
 governance            — grounding, fairness, accessibility, HITL, red team, prompts (12)
 01-revenue-cycle-...  — denial classification, appeal grounding, HITL submission     (11)
 02-prior-authorization — requirement check, criteria grounding, gated submit, urgent (12)
+03-clinical-administration — chart-grounded draft, consent/Part 2, clinician sign-off (11)
 ```
 
 ## Roadmap (next passes)
@@ -49,3 +51,4 @@ governance            — grounding, fairness, accessibility, HITL, red team, pr
 - **2026-06-25** — CloudFormation infra for Agent 01 (8 templates, cfn-lint clean) + deploy scripts.
 - **2026-06-25** — Agent 02 (Prior-Authorization) built to reference depth; 51 tests green across suites; added scripts/run_tests.sh.
 - **2026-06-25** — Stamped out CloudFormation for Agent 02 (per-agent params + non-overlapping VpcCidr wired through quickstart + deploy.sh). cfn-lint clean.
+- **2026-06-25** — Agent 03 (Clinical-Administration) built to reference depth; 62 tests green across suites.

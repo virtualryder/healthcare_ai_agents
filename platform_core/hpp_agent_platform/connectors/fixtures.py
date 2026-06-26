@@ -187,8 +187,11 @@ _IDENTITY = {
 }
 _CONSENT = {
     "check": lambda a: {"subject_ref": a.get("subject_ref", "PT-40012"),
-                        "scope": a.get("scope", "treatment_payment_operations"), "granted": True,
-                        "part2_sensitive": False, "expires": "2027-01-01"},
+                        "scope": a.get("scope", "treatment_payment_operations"),
+                        # A 42 CFR Part 2 (SUD) record requires explicit consent to disclose;
+                        # absent it, the gateway-backed check returns granted=False so the agent escalates.
+                        "part2_sensitive": bool(a.get("part2_sensitive")),
+                        "granted": not bool(a.get("part2_sensitive")), "expires": "2027-01-01"},
     "record": lambda a: {"consent_id": "CNS-7781", "scope": a.get("scope", "disclosure"),
                          "granted": True, "recorded": "2026-06-24"},
 }

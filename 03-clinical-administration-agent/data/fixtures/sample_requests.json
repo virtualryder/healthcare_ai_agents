@@ -1,0 +1,11 @@
+[
+  {"task_id": "CA-1", "task_type": "chart_summary", "patient_ref": "PT-40012", "encounter_ref": "ENC-88231",
+   "acting_user_claims": {"sub": "ma-1", "custom:hpp_role": "CLINICAL_STAFF"}},
+  {"task_id": "CA-2", "task_type": "visit_prep", "patient_ref": "PT-40012", "encounter_ref": "ENC-88231",
+   "acting_user_claims": {"sub": "ma-1", "custom:hpp_role": "CLINICAL_STAFF"}},
+  {"task_id": "CA-3", "task_type": "discharge_summary", "patient_ref": "PT-40012", "encounter_ref": "ENC-88231",
+   "acting_user_claims": {"sub": "ma-1", "custom:hpp_role": "CLINICAL_STAFF"}},
+  {"task_id": "CA-4", "task_type": "chart_summary", "patient_ref": "PT-40012", "encounter_ref": "ENC-88231",
+   "part2_sensitive": true,
+   "acting_user_claims": {"sub": "ma-1", "custom:hpp_role": "CLINICAL_STAFF"}}
+]

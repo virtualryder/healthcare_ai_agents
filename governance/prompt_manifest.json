@@ -16,6 +16,14 @@
     "02-prior-authorization.evidence": {
       "version": "1.0.0",
       "sha256": "719ce5633cafee87e0556ff950ac634d5347abcf8534629c8d58ba2966ef1fe0"
+    },
+    "03-clinical-administration.summary": {
+      "version": "1.0.0",
+      "sha256": "8dfdd378641ba4b64c1ff14f4945adeb58d341d1c15ec6d90d50a5976e36fe1d"
+    },
+    "03-clinical-administration.patient_comms": {
+      "version": "1.0.0",
+      "sha256": "562a02a40c12898b53556d1ea79176bb1ace17e09f490cd9a6fa2696910c40d2"
     }
   }
 }
