@@ -1,0 +1,5 @@
+agent_id     = "06-payment-integrity-coding"
+environment  = "dev"
+vpc_cidr     = "10.35.0.0/16"
+gateway_mode = "portable"
+deploy_mode  = "native"

@@ -1,0 +1,5 @@
+agent_id     = "02-prior-authorization"
+environment  = "dev"
+vpc_cidr     = "10.31.0.0/16"
+gateway_mode = "portable"
+deploy_mode  = "native"

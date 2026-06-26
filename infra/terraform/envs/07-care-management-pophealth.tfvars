@@ -1,0 +1,5 @@
+agent_id     = "07-care-management-pophealth"
+environment  = "dev"
+vpc_cidr     = "10.36.0.0/16"
+gateway_mode = "portable"
+deploy_mode  = "native"

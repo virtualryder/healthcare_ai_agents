@@ -1,0 +1,127 @@
+{
+  "Comment": "HPP 03-clinical-administration \u2014 Loads the chart, checks 42 CFR Part 2 consent, drafts a chart-grounded artifact; a licensed clinician signs. The agent has no order-entry or signing authority.",
+  "StartAt": "intake",
+  "TimeoutSeconds": 86400,
+  "States": {
+    "intake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: intake",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-core",
+        "Payload": {
+          "node": "intake",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "load_chart"
+    },
+    "load_chart": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: load_chart",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-core",
+        "Payload": {
+          "node": "load_chart",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "check_consent"
+    },
+    "check_consent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: check_consent",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-core",
+        "Payload": {
+          "node": "check_consent",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "produce_artifact"
+    },
+    "produce_artifact": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: produce_artifact",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-core",
+        "Payload": {
+          "node": "produce_artifact",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "compliance_check"
+    },
+    "compliance_check": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: compliance_check",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-core",
+        "Payload": {
+          "node": "compliance_check",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "clinician_review_gate"
+    },
+    "clinician_review_gate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Comment": "HITL gate \u2014 suspends until a verified Clinician approves (mirrors interrupt_before).",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-hitl",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "reviewerRole": "Clinician",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "approval.$": "$"
+      },
+      "ResultPath": "$.human_approval",
+      "Next": "finalize"
+    },
+    "finalize": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: finalize \u2014 commit approved action / forward recommendation; write PHI-masked audit.",
+      "Parameters": {
+        "FunctionName": "hpp-03-clinical-administration-${ENV}-core",
+        "Payload": {
+          "node": "finalize",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "End": true
+    }
+  }
+}

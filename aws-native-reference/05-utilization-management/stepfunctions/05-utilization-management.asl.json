@@ -1,0 +1,144 @@
+{
+  "Comment": "HPP 05-utilization-management \u2014 Applies MCG/InterQual criteria, runs a four-fifths fairness screen, drafts a recommendation; the medical director decides. payer.issue_determination is withheld from all agents; an adverse recommendation is forwarded, never auto-denied.",
+  "StartAt": "intake",
+  "TimeoutSeconds": 86400,
+  "States": {
+    "intake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: intake",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "intake",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "gather_clinical"
+    },
+    "gather_clinical": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: gather_clinical",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "gather_clinical",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "evaluate_criteria"
+    },
+    "evaluate_criteria": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: evaluate_criteria",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "evaluate_criteria",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "fairness_screen"
+    },
+    "fairness_screen": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: fairness_screen",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "fairness_screen",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "draft_recommendation"
+    },
+    "draft_recommendation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: draft_recommendation",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "draft_recommendation",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "compliance_check"
+    },
+    "compliance_check": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: compliance_check",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "compliance_check",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "medical_director_gate"
+    },
+    "medical_director_gate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Comment": "HITL gate \u2014 suspends until a verified Medical Director approves (mirrors interrupt_before).",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-hitl",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "reviewerRole": "Medical Director",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "approval.$": "$"
+      },
+      "ResultPath": "$.human_approval",
+      "Next": "finalize"
+    },
+    "finalize": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: finalize \u2014 commit approved action / forward recommendation; write PHI-masked audit.",
+      "Parameters": {
+        "FunctionName": "hpp-05-utilization-management-${ENV}-core",
+        "Payload": {
+          "node": "finalize",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "End": true
+    }
+  }
+}

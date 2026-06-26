@@ -1,0 +1,144 @@
+{
+  "Comment": "HPP 01-revenue-cycle-denial \u2014 Reviews a denied claim, classifies CARC root cause, assembles evidence, drafts a grounded appeal; the specialist approves before submission. The agent cannot submit a claim.",
+  "StartAt": "intake",
+  "TimeoutSeconds": 86400,
+  "States": {
+    "intake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: intake",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "intake",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "load_claim"
+    },
+    "load_claim": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: load_claim",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "load_claim",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "analyze_denial"
+    },
+    "analyze_denial": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: analyze_denial",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "analyze_denial",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "gather_evidence"
+    },
+    "gather_evidence": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: gather_evidence",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "gather_evidence",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "draft_appeal"
+    },
+    "draft_appeal": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: draft_appeal",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "draft_appeal",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "compliance_check"
+    },
+    "compliance_check": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: compliance_check",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "compliance_check",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "human_review_gate"
+    },
+    "human_review_gate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Comment": "HITL gate \u2014 suspends until a verified Denials Specialist approves (mirrors interrupt_before).",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-hitl",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "reviewerRole": "Denials Specialist",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "approval.$": "$"
+      },
+      "ResultPath": "$.human_approval",
+      "Next": "finalize"
+    },
+    "finalize": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: finalize \u2014 commit approved action / forward recommendation; write PHI-masked audit.",
+      "Parameters": {
+        "FunctionName": "hpp-01-revenue-cycle-denial-${ENV}-core",
+        "Payload": {
+          "node": "finalize",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "End": true
+    }
+  }
+}

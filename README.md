@@ -17,12 +17,27 @@ The result is a deployable accelerator — not a certified product — that give
 engagement team a credible, compliant starting point across eight high-value
 provider-and-payer workflows.
 
+## Quick start
+
+New here? **[`GETTING-STARTED.md`](GETTING-STARTED.md)** is the front door — prove the
+flagship agent on your laptop with no API key, run the 121-test suite, then deploy into a
+new AWS account. TL;DR:
+
+```bash
+pip install -e platform_core && pip install langgraph streamlit
+cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py   # no API key
+cd .. && bash scripts/run_tests.sh                                              # 121 tests
+# deploy to a new AWS account: see docs/DEPLOY-QUICKSTART.md
+```
+
 **Repository status (current):** **all 8 agents built to reference depth** (full LangGraph
 workflow, governed tool access, deterministic fixtures, flagship test suites, Streamlit
 dashboards, four-document doc sets, and a live Bedrock/connector path each) · shared
 `platform_core` + `governance` built · **CloudFormation for all 8 agents** (cfn-lint clean,
-per-agent isolated VPC/KMS/Cognito/audit/gateway) · **119 automated tests passing with no API
-key** · AWS-native rebuilds, decks, and offerings roll out next.
+per-agent isolated VPC/KMS/Cognito/audit/gateway) · **121 automated tests passing with no API
+key** · **Terraform parity** · **AWS-native Step Functions rebuilds** · **10 GTM decks + ROI
+calculator** · **consulting offerings + ops runbooks** — all included. New here? Start with
+[`GETTING-STARTED.md`](GETTING-STARTED.md).
 
 ---
 
@@ -50,9 +65,11 @@ Every agent and platform component is positioned honestly against four levels:
 
 **All eight agents are built to Demonstrated + Deployable-by-design** (full LangGraph
 workflow, governed tool access, deterministic fixtures, a flagship test suite, a Streamlit
-dashboard, a four-document doc set, and a live Bedrock/connector path each). Agent 01 also
-ships **CloudFormation infra** (8 templates, cfn-lint clean). The shared platform and
-governance frameworks are built and tested.
+dashboard, a four-document doc set, and a live Bedrock/connector path each). All eight ship
+**CloudFormation + Terraform infra** (cfn-lint clean) and an **AWS-native Step Functions
+rebuild** with a `waitForTaskToken` human gate. The shared platform and governance frameworks
+are built and tested. Production-readiness (CSV/CSA, IdP integration, live-connector
+validation, penetration test, HITRUST) is the engagement, not a day-one deliverable.
 
 ---
 
@@ -163,13 +180,15 @@ healthcare_ai_agents/
 ├── 08-contact-center-member-services-agent/  # BUILT — full depth (Demonstrated + Deployable)
 ├── platform_core/hpp_agent_platform/   # LLM factory · PHI masker · MCP gateway · connectors · A2A
 ├── governance/                          # grounding · prompt registry · evals · red team · fairness · accessibility · controls
-├── gtm/                                 # HPP-DECK-SOURCES.md (cited spine) · roi-calculator (roadmap)
-├── docs/                                # suite architecture, deployment, GTM (roadmap)
-├── infra/cloudformation/               # CloudFormation quick-deploy for Agent 01 (built; cfn-lint clean)
-├── infra/terraform/                    # Terraform parity (roadmap)
-├── scripts/                            # deploy.sh / build_lambdas.sh (built)
-├── aws-native-reference/                # Strands + Step Functions rebuilds (roadmap)
-└── offerings/                           # POC / pilot / SOW / battlecard (roadmap)
+├── gtm/                                 # cited sources · deck spec · demo storyboard · ROI calculator
+├── decks/                               # 10 generated AWS-style decks (8 agent + exec + CISO/CMIO)
+├── docs/                                # architecture, deploy-quickstart, WAF review, control mappings, briefings
+├── infra/cloudformation/               # CloudFormation quick-deploy, all 8 agents (cfn-lint clean) + params/
+├── infra/terraform/                    # Terraform parity — modules + per-agent tfvars
+├── scripts/                            # deploy.sh · build_lambdas.sh · run_tests.sh
+├── aws-native-reference/                # per-agent Step Functions (waitForTaskToken HITL) rebuilds
+├── offerings/                           # POC / pilot / assessment / managed-service / SOW / battlecard / TCO / TPRM
+└── runbooks/                           # incident · DR · HITL-queue · model-degradation
 ```
 
 ---
@@ -186,7 +205,4 @@ irreversible actions autonomously.
 Customers are responsible for: computer-system validation (CSV/CSA) for the intended use;
 an AWS Business Associate Agreement; IdP integration and role mapping; connector validation
 against live systems; Bedrock Guardrail configuration appropriate to their population; and
-change-control procedures for prompt and model updates.
-
-This accelerator provides the control design. The customer operationalizes, validates, and
-accepts accountability for it.
+change-contro

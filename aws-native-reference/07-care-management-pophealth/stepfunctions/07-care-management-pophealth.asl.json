@@ -1,0 +1,161 @@
+{
+  "Comment": "HPP 07-care-management-pophealth \u2014 Identifies care gaps + HCC/RAF risk + SDOH, runs a four-fifths fairness screen, checks 42 CFR Part 2 consent, drafts outreach + a care-plan update; the care manager signs off and owns the plan.",
+  "StartAt": "intake",
+  "TimeoutSeconds": 86400,
+  "States": {
+    "intake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: intake",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "intake",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "load_patient"
+    },
+    "load_patient": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: load_patient",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "load_patient",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "check_consent"
+    },
+    "check_consent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: check_consent",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "check_consent",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "identify_gaps"
+    },
+    "identify_gaps": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: identify_gaps",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "identify_gaps",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "fairness_screen"
+    },
+    "fairness_screen": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: fairness_screen",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "fairness_screen",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "draft_artifacts"
+    },
+    "draft_artifacts": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: draft_artifacts",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "draft_artifacts",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "compliance_check"
+    },
+    "compliance_check": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: compliance_check",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "compliance_check",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "care_manager_gate"
+    },
+    "care_manager_gate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Comment": "HITL gate \u2014 suspends until a verified Care Manager approves (mirrors interrupt_before).",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-hitl",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "reviewerRole": "Care Manager",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "approval.$": "$"
+      },
+      "ResultPath": "$.human_approval",
+      "Next": "finalize"
+    },
+    "finalize": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: finalize \u2014 commit approved action / forward recommendation; write PHI-masked audit.",
+      "Parameters": {
+        "FunctionName": "hpp-07-care-management-pophealth-${ENV}-core",
+        "Payload": {
+          "node": "finalize",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "End": true
+    }
+  }
+}

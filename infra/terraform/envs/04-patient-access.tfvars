@@ -1,0 +1,5 @@
+agent_id     = "04-patient-access"
+environment  = "dev"
+vpc_cidr     = "10.33.0.0/16"
+gateway_mode = "portable"
+deploy_mode  = "native"

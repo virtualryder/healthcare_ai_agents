@@ -1,0 +1,161 @@
+{
+  "Comment": "HPP 04-patient-access \u2014 Verifies identity, checks eligibility (270/271), produces a deterministic Good Faith Estimate, drafts a plain-language member message; the rep approves booking/registration.",
+  "StartAt": "intake",
+  "TimeoutSeconds": 86400,
+  "States": {
+    "intake": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: intake",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "intake",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "verify_identity"
+    },
+    "verify_identity": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: verify_identity",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "verify_identity",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "check_eligibility"
+    },
+    "check_eligibility": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: check_eligibility",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "check_eligibility",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "estimate_cost"
+    },
+    "estimate_cost": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: estimate_cost",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "estimate_cost",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "get_availability"
+    },
+    "get_availability": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: get_availability",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "get_availability",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "prepare_summary"
+    },
+    "prepare_summary": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: prepare_summary",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "prepare_summary",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "compliance_check"
+    },
+    "compliance_check": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: compliance_check",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "compliance_check",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "Next": "human_review_gate"
+    },
+    "human_review_gate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Comment": "HITL gate \u2014 suspends until a verified Access Rep approves (mirrors interrupt_before).",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-hitl",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "reviewerRole": "Access Rep",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "approval.$": "$"
+      },
+      "ResultPath": "$.human_approval",
+      "Next": "finalize"
+    },
+    "finalize": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Comment": "node: finalize \u2014 commit approved action / forward recommendation; write PHI-masked audit.",
+      "Parameters": {
+        "FunctionName": "hpp-04-patient-access-${ENV}-core",
+        "Payload": {
+          "node": "finalize",
+          "state.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "state.$": "$.Payload.state"
+      },
+      "ResultPath": "$",
+      "End": true
+    }
+  }
+}

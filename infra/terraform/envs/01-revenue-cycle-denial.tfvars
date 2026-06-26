@@ -1,0 +1,5 @@
+agent_id     = "01-revenue-cycle-denial"
+environment  = "dev"
+vpc_cidr     = "10.30.0.0/16"
+gateway_mode = "portable"
+deploy_mode  = "native"

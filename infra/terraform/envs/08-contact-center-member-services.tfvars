@@ -1,0 +1,5 @@
+agent_id     = "08-contact-center-member-services"
+environment  = "dev"
+vpc_cidr     = "10.37.0.0/16"
+gateway_mode = "portable"
+deploy_mode  = "native"
