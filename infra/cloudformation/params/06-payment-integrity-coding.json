@@ -1,0 +1,7 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "06-payment-integrity-coding"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "10.35.0.0/16"}
+]

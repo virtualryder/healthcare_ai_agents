@@ -48,6 +48,14 @@
     "06-payment-integrity-coding.overpayment": {
       "version": "1.0.0",
       "sha256": "aea8518c8dbaf59babf198da9c590a56a6c2201b96a443c1aa32ff905f78a294"
+    },
+    "07-care-management-pophealth.outreach": {
+      "version": "1.0.0",
+      "sha256": "b958f0af8c0bd063bca19ac935c589196c0f7a0af3425427b1bda5222b9cc901"
+    },
+    "07-care-management-pophealth.careplan": {
+      "version": "1.0.0",
+      "sha256": "254507a9816bd8f81c09f04a9a2375088c2397405ce2e0d8b6f3b6a11f3cd8dd"
     }
   }
 }

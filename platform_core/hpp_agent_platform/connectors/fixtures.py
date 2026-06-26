@@ -149,8 +149,11 @@ _CAREPLAN = {
                                 "program": "Chronic Care Management",
                                 "goals": ["A1c < 7.0", "BP < 130/80"], "next_review": "2026-07-20"},
     "identify_gaps": lambda a: {"patient_ref": a.get("patient_ref", "PT-40012"),
-                                "open_gaps": ["Diabetic eye exam overdue", "Nephropathy screening due"],
-                                "risk_score_hcc": 1.24, "rising_risk": True},
+                                # honor a no-gaps scenario for care-management review
+                                "open_gaps": ([] if a.get("no_gaps")
+                                              else ["diabetic eye exam overdue", "nephropathy screening due"]),
+                                "sdoh_flags": ([] if a.get("no_gaps") else ["transportation barrier"]),
+                                "risk_score_hcc": 1.24, "rising_risk": not bool(a.get("no_gaps"))},
     "update_care_plan": lambda a: {"patient_ref": a.get("patient_ref"), "updated": True,
                                    "requires_care_manager_signoff": True},
 }

@@ -12,7 +12,8 @@ or data boundary.
 | 03 Clinical-Administration | `03-clinical-administration.json` | 10.32.0.0/16 |
 | 04 Patient Access | `04-patient-access.json` | 10.33.0.0/16 |
 | 05 Utilization Management | `05-utilization-management.json` | 10.34.0.0/16 |
-| 06–08 | add `0N-<name>.json` | 10.35.0.0/16 … |
+| 06 Payment Integrity & Coding | `06-payment-integrity-coding.json` | 10.35.0.0/16 |
+| 07–08 | add `0N-<name>.json` | 10.36.0.0/16 … |
 
 ```bash
 # Stamp out Agent 02 (same templates, different AgentId + CIDR):

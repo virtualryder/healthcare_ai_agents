@@ -1,0 +1,12 @@
+[
+  {"case_id": "CM-1", "patient_ref": "PT-40012",
+   "cohort": {"selected": {"A": 50, "B": 48}, "totals": {"A": 100, "B": 100}},
+   "acting_user_claims": {"sub": "care-mgr-1", "custom:hpp_role": "CARE_MANAGER"}},
+  {"case_id": "CM-2", "patient_ref": "PT-40012", "no_gaps": true,
+   "acting_user_claims": {"sub": "care-mgr-1", "custom:hpp_role": "CARE_MANAGER"}},
+  {"case_id": "CM-3", "patient_ref": "PT-40012", "part2_sensitive": true,
+   "acting_user_claims": {"sub": "care-mgr-1", "custom:hpp_role": "CARE_MANAGER"}},
+  {"case_id": "CM-4", "patient_ref": "PT-40012",
+   "cohort": {"selected": {"A": 80, "B": 30}, "totals": {"A": 100, "B": 100}},
+   "acting_user_claims": {"sub": "care-mgr-1", "custom:hpp_role": "CARE_MANAGER"}}
+]

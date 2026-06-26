@@ -19,7 +19,7 @@ provider-and-payer workflows.
 
 **Repository status (current):** flagship Agent 01 (Revenue-Cycle & Denial) built to
 reference depth with a live Bedrock/connector path · shared `platform_core` + `governance`
-built · **96 automated tests passing with no API key** · 7 further agents specified to a
+built · **107 automated tests passing with no API key** · 7 further agents specified to a
 consistent contract and scaffolded · infra, decks, and per-agent builds roll out next.
 
 ---
@@ -46,12 +46,12 @@ Every agent and platform component is positioned honestly against four levels:
 | **Deployable** | Container contract (ARM64, `/invocations`, `/ping`) and CI pass; requires customer AWS account and Bedrock access | Suitable for a customer pilot with SI-managed infrastructure |
 | **Production-ready** | Customer computer-system validation (CSV/CSA), IdP integration, connectors tested against live systems, penetration test | Engagement milestone, not a day-one deliverable |
 
-**Agents 01–06 are built to Demonstrated + Deployable-by-design** (full LangGraph
+**Agents 01–07 are built to Demonstrated + Deployable-by-design** (full LangGraph
 workflow, governed tool access, deterministic fixtures, a flagship test suite, a Streamlit
 dashboard, a four-document doc set, and a live Bedrock/connector path each). Agent 01 also
 ships **CloudFormation infra** (8 templates, cfn-lint clean). The shared platform and
-governance frameworks are built and tested. **Agents 07–08 are at Documented maturity** with
-a per-agent spec README and a scaffold that follows the Agent 01–06 pattern.
+governance frameworks are built and tested. **Agent 08 is at Documented maturity** with
+a per-agent spec README and a scaffold that follows the Agent 01–07 pattern.
 
 ---
 
@@ -65,7 +65,7 @@ a per-agent spec README and a scaffold that follows the Agent 01–06 pattern.
 | **04** | Patient Access *(built)* | Access friction and registration errors drive leakage and downstream denials | Scheduling, registration, payer eligibility (270/271), identity | HIPAA, No Surprises Act, Section 1557 |
 | **05** | Utilization Management / Medical Necessity *(built)* | UM is high-volume and under AI scrutiny; the determination must stay human | MCG/InterQual, LCD/NCD, payer, EHR | CMS AI-in-UM guidance, ERISA, NCQA, MH Parity |
 | **06** | Payment Integrity & Coding *(built)* | Coding defects drive denials and FCA exposure; integrity recoveries are measurable | Encoder (NCCI/MUE, DRG), patient accounting, clearinghouse, EHR | HIPAA, CMS NCCI, False Claims Act, OIG |
-| **07** | Care Management & Population Health | Value-based programs depend on care-gap closure and accurate risk capture | Care management, EHR/FHIR, SDOH | HIPAA, CMS risk-adjustment integrity, NCQA, Section 1557 |
+| **07** | Care Management & Population Health *(built)* | Value-based programs depend on care-gap closure and accurate risk capture | Care management, EHR/FHIR, SDOH, consent | HIPAA, CMS risk-adjustment integrity, NCQA, Section 1557, 42 CFR Part 2 |
 | **08** | Contact Center / Member Services | Member-service volume spikes around denials and benefits; grounded answers deflect it | Amazon Connect, payer (276/277, 270/271), KB | HIPAA, Section 1557, TCPA |
 
 ---
@@ -158,7 +158,7 @@ healthcare_ai_agents/
 ├── 04-patient-access-agent/             # BUILT — full depth (Demonstrated + Deployable)
 ├── 05-utilization-management-agent/     # BUILT — full depth (Demonstrated + Deployable)
 ├── 06-payment-integrity-coding-agent/   # BUILT — full depth (Demonstrated + Deployable)
-├── 07-care-management-pophealth-agent/
+├── 07-care-management-pophealth-agent/  # BUILT — full depth (Demonstrated + Deployable)
 ├── 08-contact-center-member-services-agent/
 ├── platform_core/hpp_agent_platform/   # LLM factory · PHI masker · MCP gateway · connectors · A2A
 ├── governance/                          # grounding · prompt registry · evals · red team · fairness · accessibility · controls
