@@ -1,0 +1,22 @@
+[
+  {
+    "case_id": "CASE-30021",
+    "claim_ref": "CLM-2026-55810",
+    "mode": "POST_DENIAL",
+    "acting_user_claims": {"sub": "rcm-rep-1", "custom:hpp_role": "DENIALS_SPECIALIST"}
+  },
+  {
+    "case_id": "CASE-30022",
+    "claim_ref": "CLM-2026-55811",
+    "mode": "POST_DENIAL",
+    "denial_codes": ["CO-16"],
+    "acting_user_claims": {"sub": "rcm-rep-1", "custom:hpp_role": "DENIALS_SPECIALIST"}
+  },
+  {
+    "case_id": "CASE-30023",
+    "claim_ref": "CLM-2026-55812",
+    "mode": "POST_DENIAL",
+    "denial_codes": ["CO-29"],
+    "acting_user_claims": {"sub": "rcm-rep-1", "custom:hpp_role": "DENIALS_SPECIALIST"}
+  }
+]

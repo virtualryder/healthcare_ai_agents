@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - Agent service. native = Step Functions + Lambda with a waitForTaskToken HITL
+  gate (the denials-specialist / PA-nurse / medical-director approval resumes the machine);
+  container = ECS Fargate / AgentCore Runtime running the LangGraph agent unchanged
+  (ARM64, /invocations + /ping). The human gate is enforced by the state machine, not by
+  application code.
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev}
+  DeployMode: {Type: String, Default: native, AllowedValues: [native, container]}
+  AgentRoleArn: {Type: String}
+  HitlTableName: {Type: String, Default: ""}
+Conditions:
+  IsNative: !Equals [!Ref DeployMode, native]
+Resources:
+  AgentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Condition: IsNative
+    Properties:
+      StateMachineName: !Sub "hpp-${AgentId}-${Environment}"
+      RoleArn: !Ref AgentRoleArn
+      DefinitionString: !Sub |
+        {
+          "Comment": "HPP ${AgentId} - deterministic core + Bedrock drafting + waitForTaskToken HITL. Deploy the full ASL from aws-native-reference/${AgentId}/stepfunctions/ (roadmap).",
+          "StartAt": "LoadAndAnalyze",
+          "States": {
+            "LoadAndAnalyze": {"Type": "Pass", "Comment": "load_claim -> analyze_denial -> gather_evidence -> draft_appeal -> compliance_check (Lambda tasks)", "Next": "HumanReviewGate"},
+            "HumanReviewGate": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke.waitForTaskToken",
+              "Comment": "Blocks until a verified reviewer approves; mirrors interrupt_before in the LangGraph build.",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"taskToken.$": "$$.Task.Token", "hitlTable": "${HitlTableName}"}},
+              "Next": "Finalize"
+            },
+            "Finalize": {"Type": "Pass", "Comment": "submit appeal / queue resubmit / escalate; write PHI-masked audit", "End": true}
+          }
+        }
+Outputs:
+  Mode: {Value: !Ref DeployMode}
+  StateMachineArn:
+    Condition: IsNative
+    Value: !Ref AgentStateMachine

@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - Security stack (KMS CMK, Bedrock Guardrail with PHI filters, Cognito user pool
+  carrying the custom:hpp_role claim the gateway authorizes on, least-privilege agent role).
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
+Resources:
+  AgentKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub "CMK for HPP agent ${AgentId} (${Environment}) - encrypts PHI-bearing audit + data"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableRoot
+            Effect: Allow
+            Principal: {AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"}
+            Action: "kms:*"
+            Resource: "*"
+  AgentKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/hpp-${AgentId}-${Environment}"
+      TargetKeyId: !Ref AgentKey
+  PhiGuardrail:
+    Type: AWS::Bedrock::Guardrail
+    Properties:
+      Name: !Sub "hpp-${AgentId}-${Environment}"
+      Description: PHI masking, prompt-attack filter, and an unauthorized-determination denied topic for healthcare AI.
+      BlockedInputMessaging: "I can't help with that request."
+      BlockedOutputsMessaging: "I can't provide that information."
+      ContentPolicyConfig:
+        FiltersConfig:
+          - {Type: PROMPT_ATTACK, InputStrength: HIGH, OutputStrength: NONE}
+      SensitiveInformationPolicyConfig:
+        PiiEntitiesConfig:
+          - {Type: US_SOCIAL_SECURITY_NUMBER, Action: BLOCK}
+          - {Type: US_BANK_ACCOUNT_NUMBER, Action: BLOCK}
+          - {Type: CREDIT_DEBIT_CARD_NUMBER, Action: BLOCK}
+          - {Type: NAME, Action: ANONYMIZE}
+          - {Type: ADDRESS, Action: ANONYMIZE}
+          - {Type: AGE, Action: ANONYMIZE}
+          - {Type: EMAIL, Action: ANONYMIZE}
+          - {Type: PHONE, Action: ANONYMIZE}
+      TopicPolicyConfig:
+        TopicsConfig:
+          - Name: UnauthorizedCoverageOrClinicalDetermination
+            Definition: Issuing a binding coverage determination, medical-necessity denial, or clinical order the agent is not authorized to make. AI assists; a licensed human decides.
+            Type: DENY
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "hpp-${AgentId}-${Environment}"
+      AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}
+      Schema:
+        - {Name: hpp_role, AttributeDataType: String, Mutable: true}
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub "hpp-${AgentId}-${Environment}-app"
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+  AgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "hpp-${AgentId}-${Environment}-agent"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: [lambda.amazonaws.com, states.amazonaws.com, ecs-tasks.amazonaws.com, bedrock-agentcore.amazonaws.com]}
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - {Effect: Allow, Action: [bedrock:InvokeModel, bedrock:ApplyGuardrail], Resource: "*"}
+              - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
+              - Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query]
+                Resource: !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/hpp-${AgentId}-${Environment}-*"
+Outputs:
+  KmsKeyArn: {Value: !GetAtt AgentKey.Arn, Export: {Name: !Sub "hpp-${AgentId}-${Environment}-kms"}}
+  GuardrailId: {Value: !Ref PhiGuardrail}
+  UserPoolId: {Value: !Ref UserPool}
+  UserPoolClientId: {Value: !Ref UserPoolClient}
+  AgentRoleArn: {Value: !GetAtt AgentRole.Arn, Export: {Name: !Sub "hpp-${AgentId}-${Environment}-role"}}

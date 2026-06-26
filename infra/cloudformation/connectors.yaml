@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - Connectors stack. One governed connector dispatcher Lambda is the only thing
+  that talks to a system of record (patient accounting, clearinghouse, payer, encoder, EHR,
+  KB). The MCP gateway invokes it per authorized tool call; it routes <kind>.<method> to the
+  backing system behind the gateway's scoped token. The deployable form of platform_core's
+  connector framework. Replace the inline reference handler with the org's real adapters
+  (or have it proxy <KIND>_BASE_URL endpoints).
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev}
+  KmsKeyArn: {Type: String}
+  AuditTableName: {Type: String}
+  AgentRoleArn: {Type: String}
+Resources:
+  ConnectorFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "hpp-${AgentId}-${Environment}-connector"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 256
+      Role: !Ref AgentRoleArn
+      KmsKeyArn: !Ref KmsKeyArn
+      Environment:
+        Variables:
+          AUDIT_TABLE: !Ref AuditTableName
+          CONNECTOR_MODE: live
+      Code:
+        ZipFile: |
+          # Reference connector dispatcher. In production this packages
+          # hpp_agent_platform.connectors (live adapters) and routes the
+          # gateway-authorized {kind}.{method} call to the system of record.
+          import json
+          def handler(event, context):
+              path = (event.get("pathParameters") or {})
+              kind, method = path.get("kind"), path.get("method")
+              body = json.loads(event.get("body") or "{}")
+              # TODO: dispatch to hpp_agent_platform.connectors.get_connector(kind)[method](**body)
+              return {"statusCode": 200,
+                      "headers": {"Content-Type": "application/json"},
+                      "body": json.dumps({"kind": kind, "method": method,
+                                          "note": "reference connector; wire live adapters here",
+                                          "echo": body})}
+  ConnectorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/hpp-${AgentId}-${Environment}-connector"
+      RetentionInDays: 365
+Outputs:
+  ConnectorFnArn: {Value: !GetAtt ConnectorFn.Arn}
+  ConnectorFnName: {Value: !Ref ConnectorFn}

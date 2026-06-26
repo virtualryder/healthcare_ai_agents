@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - MCP gateway (PORTABLE path - API Gateway HTTP API + Cognito JWT authorizer).
+  Deploys in any commercial Region day one. Routes every tool call to the governed connector
+  Lambda; the deny-by-default authorization, human gate, and PHI-masked audit are enforced in
+  the connector's platform_core logic (or an AgentCore Gateway in the agentcore path).
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev}
+  UserPoolId: {Type: String}
+  UserPoolClientId: {Type: String}
+  ConnectorFnArn: {Type: String}
+Resources:
+  GatewayApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "hpp-${AgentId}-${Environment}-gateway"
+      ProtocolType: HTTP
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref GatewayApi
+      AuthorizerType: JWT
+      IdentitySource: ["$request.header.Authorization"]
+      Name: cognito-jwt
+      JwtConfiguration:
+        Audience: [!Ref UserPoolClientId]
+        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
+  ToolIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref GatewayApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Ref ConnectorFnArn
+      PayloadFormatVersion: "2.0"
+  ToolRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref GatewayApi
+      RouteKey: "POST /tool/{kind}/{method}"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub "integrations/${ToolIntegration}"
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties: {ApiId: !Ref GatewayApi, StageName: !Ref Environment, AutoDeploy: true}
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ConnectorFnArn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${GatewayApi}/*/*/tool/*"
+Outputs:
+  GatewayUrl: {Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"}

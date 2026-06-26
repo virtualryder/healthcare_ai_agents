@@ -1,0 +1,6 @@
+Copyright (c) 2026. All rights reserved.
+
+This repository is a decision-support accelerator and reference implementation provided
+for evaluation and engagement use. It is not a certified, validated, or production-ready
+product. See README.md and each agent's docs/compliance.md for the compliance posture and
+the division of responsibilities between AWS, the systems integrator, and the customer.

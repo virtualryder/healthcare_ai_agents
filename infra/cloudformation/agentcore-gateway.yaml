@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - MCP gateway (AGENTCORE path - Bedrock AgentCore Gateway + Identity). For
+  AgentCore-enabled Regions. Each connector Lambda is registered as an MCP tool TARGET;
+  target names map 1:1 to platform_core's TOOL_REGISTRY (<kind>.<method>). Inbound auth via
+  AgentCore Identity (Cognito/OIDC); outbound auth via the gateway role.
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev}
+  ConnectorFnArn: {Type: String}
+  GatewayRoleArn: {Type: String}
+Resources:
+  HppGateway:
+    Type: AWS::BedrockAgentCore::Gateway
+    Properties:
+      Name: !Sub "hpp-${AgentId}-${Environment}"
+      RoleArn: !Ref GatewayRoleArn
+      ProtocolType: MCP
+      AuthorizerType: AWS_IAM
+  PayerTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      GatewayIdentifier: !Ref HppGateway
+      Name: payer
+      TargetConfiguration:
+        Mcp: {Lambda: {LambdaArn: !Ref ConnectorFnArn}}
+  ClearinghouseTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Properties:
+      GatewayIdentifier: !Ref HppGateway
+      Name: clearinghouse
+      TargetConfiguration:
+        Mcp: {Lambda: {LambdaArn: !Ref ConnectorFnArn}}
+Outputs:
+  GatewayId: {Value: !Ref HppGateway}
+  Note: {Value: "Confirm AWS::BedrockAgentCore resource availability in your Region; use gateway-portable.yaml where AgentCore Gateway is unavailable."}

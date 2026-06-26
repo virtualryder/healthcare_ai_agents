@@ -1,0 +1,11 @@
+# Agent 01 — Revenue-Cycle & Denial. Demo runs with NO API key (EXTRACT_MODE=demo).
+# Core workflow:
+langgraph>=0.2.0
+# Platform core (install editable from ../platform_core):
+#   pip install -e ../platform_core
+# LLM providers (choose one for live mode):
+langchain-anthropic>=0.2 ; extra == "anthropic"
+langchain-aws>=0.2 ; extra == "bedrock"
+boto3>=1.34 ; extra == "bedrock"
+# Demo dashboard:
+streamlit>=1.36

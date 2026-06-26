@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP AI Agent Suite - MASTER quick-deploy for a STANDALONE agent. Nests network (own VPC +
+  Flow Logs + Bedrock VPC endpoint), security (KMS, Bedrock Guardrail with PHI filters,
+  Cognito, least-privilege roles), data (append-only PHI-masked audit + S3 Object Lock WORM +
+  HITL table), connectors (one governed Lambda per system of record), the MCP gateway
+  (portable API Gateway + Cognito JWT, or Bedrock AgentCore Gateway), and the agent
+  (native Step Functions + waitForTaskToken HITL, or container). New account -> running,
+  HIPAA-defensible agent. Requires an AWS Business Associate Agreement for PHI workloads.
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
+  GatewayMode: {Type: String, Default: portable, AllowedValues: [portable, agentcore]}
+  DeployMode: {Type: String, Default: native, AllowedValues: [native, container]}
+  TemplateBaseUrl: {Type: String, Description: "S3 base URL where nested templates are staged"}
+Conditions:
+  UsePortable: !Equals [!Ref GatewayMode, portable]
+  UseAgentCore: !Equals [!Ref GatewayMode, agentcore]
+Resources:
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/network.yaml"
+      Parameters: {AgentId: !Ref AgentId, Environment: !Ref Environment}
+  Security:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/security.yaml"
+      Parameters: {AgentId: !Ref AgentId, Environment: !Ref Environment}
+  Data:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/data.yaml"
+      Parameters:
+        AgentId: !Ref AgentId
+        Environment: !Ref Environment
+        KmsKeyArn: !GetAtt Security.Outputs.KmsKeyArn
+  Connectors:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/connectors.yaml"
+      Parameters:
+        AgentId: !Ref AgentId
+        Environment: !Ref Environment
+        KmsKeyArn: !GetAtt Security.Outputs.KmsKeyArn
+        AuditTableName: !GetAtt Data.Outputs.AuditTableName
+        AgentRoleArn: !GetAtt Security.Outputs.AgentRoleArn
+  GatewayPortable:
+    Type: AWS::CloudFormation::Stack
+    Condition: UsePortable
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/gateway-portable.yaml"
+      Parameters:
+        AgentId: !Ref AgentId
+        Environment: !Ref Environment
+        UserPoolId: !GetAtt Security.Outputs.UserPoolId
+        UserPoolClientId: !GetAtt Security.Outputs.UserPoolClientId
+        ConnectorFnArn: !GetAtt Connectors.Outputs.ConnectorFnArn
+  GatewayAgentCore:
+    Type: AWS::CloudFormation::Stack
+    Condition: UseAgentCore
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/agentcore-gateway.yaml"
+      Parameters:
+        AgentId: !Ref AgentId
+        Environment: !Ref Environment
+        ConnectorFnArn: !GetAtt Connectors.Outputs.ConnectorFnArn
+        GatewayRoleArn: !GetAtt Security.Outputs.AgentRoleArn
+  Agent:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBaseUrl}/agent-service.yaml"
+      Parameters:
+        AgentId: !Ref AgentId
+        Environment: !Ref Environment
+        DeployMode: !Ref DeployMode
+        AgentRoleArn: !GetAtt Security.Outputs.AgentRoleArn
+        HitlTableName: !GetAtt Data.Outputs.HitlTableName
+Outputs:
+  VpcId: {Value: !GetAtt Network.Outputs.VpcId}
+  GuardrailId: {Value: !GetAtt Security.Outputs.GuardrailId}
+  AuditTable: {Value: !GetAtt Data.Outputs.AuditTableName}
+  WormBucket: {Value: !GetAtt Data.Outputs.WormBucketName}
+  GatewayUrl:
+    Condition: UsePortable
+    Value: !GetAtt GatewayPortable.Outputs.GatewayUrl
+  GatewayMode: {Value: !Ref GatewayMode}
+  DeployMode: {Value: !Ref DeployMode}

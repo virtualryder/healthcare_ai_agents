@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - Data stack (append-only PHI-masked audit DynamoDB with PITR, HITL approvals
+  table, WORM S3 Object Lock COMPLIANCE bucket). Supports HIPAA Security Rule audit controls
+  (45 CFR 164.312(b)) and tamper-evident records retention.
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev}
+  KmsKeyArn: {Type: String}
+  AuditRetentionDays: {Type: Number, Default: 2555, Description: "WORM retention; default 7 years. Tune to the org records schedule."}
+Resources:
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "hpp-${AgentId}-${Environment}-audit"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: audit_id, AttributeType: S}
+        - {AttributeName: ts, AttributeType: S}
+      KeySchema:
+        - {AttributeName: audit_id, KeyType: HASH}
+        - {AttributeName: ts, KeyType: RANGE}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref KmsKeyArn}
+  HitlTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "hpp-${AgentId}-${Environment}-hitl"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: review_id, AttributeType: S}]
+      KeySchema: [{AttributeName: review_id, KeyType: HASH}]
+      SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref KmsKeyArn}
+  WormBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "hpp-${AgentId}-${Environment}-worm-${AWS::AccountId}"
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule: {DefaultRetention: {Mode: COMPLIANCE, Days: !Ref AuditRetentionDays}}
+      VersioningConfiguration: {Status: Enabled}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - {ServerSideEncryptionByDefault: {SSEAlgorithm: aws:kms, KMSMasterKeyID: !Ref KmsKeyArn}}
+      PublicAccessBlockConfiguration:
+        {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+Outputs:
+  AuditTableName: {Value: !Ref AuditTable}
+  HitlTableName: {Value: !Ref HitlTable}
+  WormBucketName: {Value: !Ref WormBucket}
+  # NOTE: append-only is enforced by an Org SCP / IAM policy denying dynamodb:UpdateItem &
+  # dynamodb:DeleteItem on the audit table (the agent role above grants only PutItem/Get/Query).
+  # See ../../runbooks (roadmap) for the SCP and the WORM legal-hold procedure.
