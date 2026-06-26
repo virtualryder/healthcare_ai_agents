@@ -1,0 +1,7 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "07-care-management-pophealth"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "10.36.0.0/16"}
+]

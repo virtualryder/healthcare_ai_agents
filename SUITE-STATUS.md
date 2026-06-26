@@ -23,10 +23,12 @@
 - **Agent 05 — Utilization Management** — built to reference depth (first payer-side agent): MCG/InterQual criteria, coverage (LCD/NCD), four-fifths fairness screen, criteria-grounded recommendation (MEETS/DOES_NOT_MEET/NEEDS_INFO), framework-enforced medical-director gate. `payer.issue_determination` withheld from every agent; an adverse recommendation is forwarded, never auto-denied. Full test suite + 4-doc set + live runbook.
 - **Agent 06 — Payment Integrity & Coding** — built to reference depth: code suggestion + NCCI/MUE validation + LCD/NCD necessity + 837 scrub; deterministic detection of upcoding/overpayment, bundling edits, duplicates, and unsupported necessity; framework-enforced reviewer gate. The agent FLAGS only — no recoupment, payment adjustment, or claim submission (submit_claim withheld). Full test suite + 4-doc set + live runbook.
 - **Agent 07 — Care Management & Population Health** — built to reference depth: care-gap identification + HCC/RAF risk + SDOH, four-fifths fairness screen on risk strat, 42 CFR Part 2 consent gate, plain-language patient outreach, framework-enforced care-manager sign-off, gated care-plan write. Full test suite + 4-doc set + live runbook.
-- **Agent 08** — Documented: per-agent spec README and scaffold; build follows the 01–07 pattern.
+- **Agent 08 — Contact Center / Member Services** — built to reference depth (completes the suite): Amazon Connect member inquiries, claim status (276/277) + eligibility (270/271), identity gate before disclosure, plain-language responses, grievance intake, framework-enforced rep gate, gated log/grievance writes. Cannot submit an appeal (hands off to Agent 01). Full test suite + 4-doc set + live runbook.
+
+**ALL 8 AGENTS BUILT.** CloudFormation stamped for all 8 (params CIDRs 10.30–10.37).
 
 ## Test status
-`107 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
+`119 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
 installed; it passes when it is). All run with **no API key**.
 
 Each agent is an independent deployable (own top-level `agent`/`tools` packages), so the
@@ -41,6 +43,7 @@ governance            — grounding, fairness, accessibility, HITL, red team, pr
 05-utilization-management — criteria, fairness screen, recommendation, director gate, withheld determination (10)
 06-payment-integrity-coding — NCCI/MUE, upcoding/duplicate/necessity flags, reviewer gate, flag-only (12)
 07-care-management-pophealth — gaps/risk/SDOH, fairness screen, Part 2 consent, care-manager gate (11)
+08-contact-center-member-services — identity gate, claim/benefits/grievance, rep gate (12)
 ```
 
 ## Roadmap (next passes)
@@ -68,3 +71,5 @@ governance            — grounding, fairness, accessibility, HITL, red team, pr
 - **2026-06-25** — Agent 06 (Payment Integrity & Coding) built to reference depth; 96 tests green across suites.
 - **2026-06-25** — Stamped out CloudFormation for Agent 06 (params + VpcCidr 10.35.0.0/16). cfn-lint clean.
 - **2026-06-25** — Agent 07 (Care Management & Population Health) built to reference depth; 107 tests green across suites.
+- **2026-06-25** — Stamped out CloudFormation for Agent 07 (params + VpcCidr 10.36.0.0/16). cfn-lint clean.
+- **2026-06-25** — Agent 08 (Contact Center / Member Services) built; **all 8 agents complete**. CloudFormation stamped for all 8 (CIDRs 10.30–10.37). 119 tests green across suites; cfn-lint clean.

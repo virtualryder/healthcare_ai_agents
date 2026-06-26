@@ -1,0 +1,17 @@
+[
+  {"interaction_id": "CC-1", "inquiry_type": "claim_status", "member_ref": "MBR-30551",
+   "claim_ref": "CLM-2026-55810", "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "msr-1", "custom:hpp_role": "MEMBER_SERVICES_REP"}},
+  {"interaction_id": "CC-2", "inquiry_type": "benefits", "member_ref": "MBR-30551",
+   "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "msr-1", "custom:hpp_role": "MEMBER_SERVICES_REP"}},
+  {"interaction_id": "CC-3", "inquiry_type": "grievance", "member_ref": "MBR-30551",
+   "grievance_text": "My claim was denied and no one explained why.", "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "msr-1", "custom:hpp_role": "MEMBER_SERVICES_REP"}},
+  {"interaction_id": "CC-4", "inquiry_type": "claim_status", "member_ref": "MBR-30551",
+   "claim_ref": "CLM-2026-55810",
+   "acting_user_claims": {"sub": "msr-1", "custom:hpp_role": "MEMBER_SERVICES_REP"}},
+  {"interaction_id": "CC-5", "inquiry_type": "benefits", "member_ref": "MBR-INACTIVE",
+   "identity_assertion": "verified-idp-token",
+   "acting_user_claims": {"sub": "msr-1", "custom:hpp_role": "MEMBER_SERVICES_REP"}}
+]

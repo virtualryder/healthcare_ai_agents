@@ -1,0 +1,7 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "08-contact-center-member-services"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "10.37.0.0/16"}
+]

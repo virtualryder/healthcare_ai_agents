@@ -56,6 +56,14 @@
     "07-care-management-pophealth.careplan": {
       "version": "1.0.0",
       "sha256": "254507a9816bd8f81c09f04a9a2375088c2397405ce2e0d8b6f3b6a11f3cd8dd"
+    },
+    "08-contact-center-member-services.response": {
+      "version": "1.0.0",
+      "sha256": "8034ac07500553d3f35871b389794911c7fcdc040e6a5f975c65920666840e18"
+    },
+    "08-contact-center-member-services.grievance": {
+      "version": "1.0.0",
+      "sha256": "be73c8a0c599d67be72f6e5704375ec1a9120c3f8fb69db56c4d985a7c5faed4"
     }
   }
 }
