@@ -8,6 +8,14 @@
     "01-revenue-cycle-denial.appeal": {
       "version": "1.0.0",
       "sha256": "adddaaee940565b4a572753c1e486e93aff3cd5e169ebae1a170e2bfc92c9e34"
+    },
+    "02-prior-authorization.rationale": {
+      "version": "1.0.0",
+      "sha256": "278cd72f2231d637432334e9dfa4afc50d110177cb81eded0109ddebb0658348"
+    },
+    "02-prior-authorization.evidence": {
+      "version": "1.0.0",
+      "sha256": "719ce5633cafee87e0556ff950ac634d5347abcf8534629c8d58ba2966ef1fe0"
     }
   }
 }

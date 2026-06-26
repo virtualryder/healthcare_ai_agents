@@ -19,7 +19,7 @@ provider-and-payer workflows.
 
 **Repository status (current):** flagship Agent 01 (Revenue-Cycle & Denial) built to
 reference depth with a live Bedrock/connector path · shared `platform_core` + `governance`
-built · **38 automated tests passing with no API key** · 7 further agents specified to a
+built · **51 automated tests passing with no API key** · 7 further agents specified to a
 consistent contract and scaffolded · infra, decks, and per-agent builds roll out next.
 
 ---
@@ -46,11 +46,12 @@ Every agent and platform component is positioned honestly against four levels:
 | **Deployable** | Container contract (ARM64, `/invocations`, `/ping`) and CI pass; requires customer AWS account and Bedrock access | Suitable for a customer pilot with SI-managed infrastructure |
 | **Production-ready** | Customer computer-system validation (CSV/CSA), IdP integration, connectors tested against live systems, penetration test | Engagement milestone, not a day-one deliverable |
 
-**Agent 01 is built to Demonstrated + Deployable-by-design** (full LangGraph workflow,
-governed tool access, deterministic fixtures, a flagship test suite, a Streamlit
-dashboard, a four-document doc set, and a live Bedrock/connector path). The shared
-platform and governance frameworks are built and tested. **Agents 02–08 are at Documented
-maturity** with a per-agent spec README and a scaffold that follows Agent 01's pattern.
+**Agents 01 and 02 are built to Demonstrated + Deployable-by-design** (full LangGraph
+workflow, governed tool access, deterministic fixtures, a flagship test suite, a Streamlit
+dashboard, a four-document doc set, and a live Bedrock/connector path each). Agent 01 also
+ships **CloudFormation infra** (8 templates, cfn-lint clean). The shared platform and
+governance frameworks are built and tested. **Agents 03–08 are at Documented maturity** with
+a per-agent spec README and a scaffold that follows the Agent 01/02 pattern.
 
 ---
 
@@ -59,7 +60,7 @@ maturity** with a per-agent spec README and a scaffold that follows Agent 01's p
 | # | Agent | Problem it solves | Primary systems | Key regulations |
 |---|---|---|---|---|
 | **01** | Revenue-Cycle & Denial *(built — flagship)* | Denials reached ~11.8% and climbing; hospitals spent ~$18B in 2025 overturning them and 35–60% of denials are never reworked | Patient accounting, clearinghouse (X12 837/835/277), payer portal, encoder, EHR/FHIR | HIPAA, CMS-0057-F, No Surprises Act, False Claims Act |
-| **02** | Prior-Authorization | ~39 PAs/physician/week (≈13 hrs); 94% say PA delays care; CMS mandates FHIR PA APIs by 2027 | Payer (Da Vinci CRD/DTR/PAS, X12 278), MCG/InterQual, EHR, IDP | CMS-0057-F, HIPAA, state PA-transparency laws |
+| **02** | Prior-Authorization *(built)* | ~39 PAs/physician/week (≈13 hrs); 94% say PA delays care; CMS mandates FHIR PA APIs by 2027 | Payer (Da Vinci CRD/DTR/PAS, X12 278), MCG/InterQual, EHR, IDP | CMS-0057-F, HIPAA, state PA-transparency laws |
 | **03** | Clinical-Administration | Documentation and inbox burden drive clinician burnout; summaries and drafts compress it | EHR/FHIR (HealthLake, Comprehend Medical), care plan, scheduling | HIPAA, 21st Century Cures (info-blocking) |
 | **04** | Patient Access | Access friction and registration errors drive leakage and downstream denials | Scheduling, registration, payer eligibility (270/271) | HIPAA, No Surprises Act, Section 1557 |
 | **05** | Utilization Management / Medical Necessity | UM is high-volume and under AI scrutiny; the determination must stay human | MCG/InterQual, LCD/NCD, payer, EHR | CMS AI-in-UM guidance, ERISA, NCQA, MH Parity |
@@ -138,10 +139,10 @@ export EXTRACT_MODE=demo
 python demo/demo_run.py            # three denial paths: appeal / resubmit / escalate
 streamlit run app.py               # dashboard at http://localhost:8501
 
-# Full test suite (platform + governance + agent), no API key:
+# Full test suite, no API key (each agent is an independent deployable, so its
+# own top-level packages are tested in a separate pytest invocation):
 cd ..
-PYTHONPATH=platform_core:01-revenue-cycle-denial-agent:. python -m pytest \
-  platform_core/tests governance 01-revenue-cycle-denial-agent/tests -q
+bash scripts/run_tests.sh
 ```
 
 ---
@@ -152,7 +153,7 @@ PYTHONPATH=platform_core:01-revenue-cycle-denial-agent:. python -m pytest \
 healthcare_ai_agents/
 ├── README.md · SUITE-STATUS.md · ENTERPRISE-PLATFORM.md · SOLUTION-FIELD-GUIDE.md
 ├── 01-revenue-cycle-denial-agent/      # FLAGSHIP — built to reference depth (+ live path)
-├── 02-prior-authorization-agent/       # spec README (build follows the 01 pattern)
+├── 02-prior-authorization-agent/       # BUILT — full depth (Demonstrated + Deployable)
 ├── 03-clinical-administration-agent/
 ├── 04-patient-access-agent/
 ├── 05-utilization-management-agent/

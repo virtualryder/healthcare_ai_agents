@@ -43,3 +43,11 @@ LangGraph agent unchanged on ECS Fargate / AgentCore Runtime (ARM64, `/invocatio
 > SSN/bank/card and anonymizes name/address/age/email/phone; the audit table is append-only
 > and KMS-encrypted; finalized snapshots land in the WORM bucket. Terraform parity is on the
 > roadmap (`../terraform/`).
+
+### Stamping out additional agents
+The same template set deploys every agent — only parameters change (see `params/`). Each agent gets its own isolated VPC, KMS key, Cognito pool, audit table, WORM bucket, gateway, and state machine. Pass a distinct `VpcCidr` to co-deploy agents in one account/Region:
+
+```bash
+scripts/deploy.sh 01-revenue-cycle-denial dev portable native s3://my-cfn-bucket/hpp 10.30.0.0/16
+scripts/deploy.sh 02-prior-authorization  dev portable native s3://my-cfn-bucket/hpp 10.31.0.0/16
+```

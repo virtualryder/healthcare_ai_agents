@@ -13,6 +13,7 @@ Parameters:
   GatewayMode: {Type: String, Default: portable, AllowedValues: [portable, agentcore]}
   DeployMode: {Type: String, Default: native, AllowedValues: [native, container]}
   TemplateBaseUrl: {Type: String, Description: "S3 base URL where nested templates are staged"}
+  VpcCidr: {Type: String, Default: 10.30.0.0/16, Description: "Per-agent VPC CIDR; use distinct ranges to co-deploy agents in one account/Region"}
 Conditions:
   UsePortable: !Equals [!Ref GatewayMode, portable]
   UseAgentCore: !Equals [!Ref GatewayMode, agentcore]
@@ -21,7 +22,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub "${TemplateBaseUrl}/network.yaml"
-      Parameters: {AgentId: !Ref AgentId, Environment: !Ref Environment}
+      Parameters: {AgentId: !Ref AgentId, Environment: !Ref Environment, VpcCidr: !Ref VpcCidr}
   Security:
     Type: AWS::CloudFormation::Stack
     Properties:

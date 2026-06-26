@@ -7,6 +7,7 @@ ENV="${2:-dev}"
 GW="${3:-portable}"
 DEPLOY="${4:-native}"
 S3_BASE="${5:?pass an s3://bucket/prefix to stage nested templates}"
+VPC_CIDR="${6:-10.30.0.0/16}"
 
 CFN_DIR="$(cd "$(dirname "$0")/../infra/cloudformation" && pwd)"
 echo "Staging templates from $CFN_DIR to $S3_BASE ..."
@@ -22,7 +23,7 @@ aws cloudformation deploy \
   --stack-name "hpp-${AGENT_ID}-${ENV}" \
   --parameter-overrides AgentId="$AGENT_ID" Environment="$ENV" \
                         GatewayMode="$GW" DeployMode="$DEPLOY" \
-                        TemplateBaseUrl="$BASE_URL" \
+                        TemplateBaseUrl="$BASE_URL" VpcCidr="$VPC_CIDR" \
   --capabilities CAPABILITY_NAMED_IAM
 echo "Done. Outputs:"
 aws cloudformation describe-stacks --stack-name "hpp-${AGENT_ID}-${ENV}" \

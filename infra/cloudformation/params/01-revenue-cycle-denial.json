@@ -1,0 +1,6 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "01-revenue-cycle-denial"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"}
+]

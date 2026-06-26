@@ -1,0 +1,28 @@
+[
+  {
+    "case_id": "PA-CASE-9001",
+    "patient_ref": "PT-40012",
+    "encounter_ref": "ENC-88231",
+    "service": "72148",
+    "diagnosis": ["M54.16"],
+    "urgent": false,
+    "acting_user_claims": {"sub": "pa-coord-1", "custom:hpp_role": "PA_COORDINATOR"}
+  },
+  {
+    "case_id": "PA-CASE-9002",
+    "patient_ref": "PT-40012",
+    "service": "99214",
+    "diagnosis": ["E11.9"],
+    "urgent": false,
+    "acting_user_claims": {"sub": "pa-coord-1", "custom:hpp_role": "PA_COORDINATOR"}
+  },
+  {
+    "case_id": "PA-CASE-9003",
+    "patient_ref": "PT-40012",
+    "encounter_ref": "ENC-88231",
+    "service": "70553",
+    "diagnosis": ["G93.40"],
+    "urgent": true,
+    "acting_user_claims": {"sub": "pa-coord-1", "custom:hpp_role": "PA_COORDINATOR"}
+  }
+]

@@ -1,0 +1,6 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "02-prior-authorization"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"}
+]

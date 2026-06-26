@@ -5,7 +5,28 @@
       "Bash(git branch:*)",
       "Bash(git remote:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo:*)",
+      "Bash(where gh:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" --version)",
+      "Bash(\"/c/Program Files \\(x86\\)/GitHub CLI/gh.exe\" --version)",
+      "Bash(cmd.exe /c \"gh --version\")",
+      "Bash(cmd.exe /c \"gh repo view virtualryder/healthcare_ai_agents --json description,repositoryTopics,homepageUrl\" 2>&1)",
+      "Bash(cmd.exe /c \"gh repo edit virtualryder/healthcare_ai_agents --description \\\\\"Governed AI agents for healthcare providers and payers — denial management, prior auth, clinical admin, patient access, UM, coding, care management, contact center. Built on AWS Bedrock + AgentCore with HIPAA controls.\\\\\"\" 2>&1)",
+      "Bash(cmd.exe /c \"gh repo edit virtualryder/healthcare_ai_agents --add-topic healthcare --add-topic ai-agents --add-topic hipaa --add-topic aws-bedrock --add-topic langgraph --add-topic healthcare-ai --add-topic revenue-cycle --add-topic prior-authorization --add-topic clinical-nlp --add-topic mcp-gateway --add-topic phi-masking --add-topic governance --add-topic python\" 2>&1)",
+      "Bash(cmd.exe /c \"gh repo view virtualryder/healthcare_ai_agents --json description,repositoryTopics\" 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI:/c/Users/daryd/AppData/Local/GitHub CLI\")",
+      "Bash(gh --version)",
+      "Bash(powershell.exe -Command \"gh --version\")",
+      "Bash(cmd.exe /c \"where gh\" 2>&1)",
+      "Bash(powershell.exe -NoProfile -Command '$env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\); Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source' 2>&1)",
+      "Bash(git config:*)",
+      "Bash(echo \"protocol=https:*)",
+      "Bash(git credential:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh auth:*)"
     ]
   }
 }
