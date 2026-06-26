@@ -1,0 +1,17 @@
+[
+  {"case_id": "PI-1", "claim_ref": "CLM-2026-55810", "encounter_ref": "ENC-88231",
+   "billed_cpt": ["99214"], "billed_icd10": ["E11.9", "I10"],
+   "acting_user_claims": {"sub": "coder-1", "custom:hpp_role": "CODING_SPECIALIST"}},
+  {"case_id": "PI-2", "claim_ref": "CLM-2026-55810", "encounter_ref": "ENC-88231",
+   "billed_cpt": ["99215"], "billed_icd10": ["E11.9"],
+   "acting_user_claims": {"sub": "coder-1", "custom:hpp_role": "CODING_SPECIALIST"}},
+  {"case_id": "PI-3", "claim_ref": "CLM-2026-55810", "encounter_ref": "ENC-88231",
+   "billed_cpt": ["99214"], "billed_icd10": ["E11.9"], "simulate_ncci": true,
+   "acting_user_claims": {"sub": "coder-1", "custom:hpp_role": "CODING_SPECIALIST"}},
+  {"case_id": "PI-4", "claim_ref": "CLM-2026-55810", "encounter_ref": "ENC-88231",
+   "billed_cpt": ["99214"], "billed_icd10": ["E11.9"], "duplicate": true,
+   "acting_user_claims": {"sub": "coder-1", "custom:hpp_role": "CODING_SPECIALIST"}},
+  {"case_id": "PI-5", "claim_ref": "CLM-2026-55810", "encounter_ref": "ENC-88231",
+   "billed_cpt": ["99214"], "billed_icd10": ["Z00.00"], "necessity_supported": false,
+   "acting_user_claims": {"sub": "coder-1", "custom:hpp_role": "CODING_SPECIALIST"}}
+]

@@ -32,6 +32,22 @@
     "04-patient-access.benefits": {
       "version": "1.0.0",
       "sha256": "5f5331efa75e130fe24e7cdd840173862c3daf85ee0d064ad6eaaa54e2085a91"
+    },
+    "05-utilization-management.rationale": {
+      "version": "1.0.0",
+      "sha256": "b28e8a8b7432c560138439e76922505a5a90358fb96a31f8b360e921cc730902"
+    },
+    "05-utilization-management.evidence": {
+      "version": "1.0.0",
+      "sha256": "748fa7d4cd79234e606f25893f6e03a000705fa77865f2bbcecc9eaf7ef8ee3d"
+    },
+    "06-payment-integrity-coding.review": {
+      "version": "1.0.0",
+      "sha256": "519c402d462d835a51c772e4c43579d4597e809dfa3ce402a6818ea4b034e57d"
+    },
+    "06-payment-integrity-coding.overpayment": {
+      "version": "1.0.0",
+      "sha256": "aea8518c8dbaf59babf198da9c590a56a6c2201b96a443c1aa32ff905f78a294"
     }
   }
 }

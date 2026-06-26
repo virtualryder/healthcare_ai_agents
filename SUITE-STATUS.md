@@ -20,10 +20,12 @@
   `payer.issue_determination` withheld from all agents.
 - **Agent 03 — Clinical-Administration** — built to reference depth: chart load (FHIR) + care plan, 42 CFR Part 2 consent gate, task-typed artifact (summary/visit-prep/referral/discharge/inbox), grounding + PHI + health-literacy checks, framework-enforced clinician sign-off gate, full test suite + 4-doc set + live runbook. `ehr.draft_note` is a gated draft; no order-entry/signing.
 - **Agent 04 — Patient Access** — built to reference depth: identity-gated benefits (270/271), deterministic Good Faith Estimate (No Surprises Act), scheduling availability, plain-language member message, framework-enforced rep gate, gated book+register writes; inactive-coverage escalation; full test suite + 4-doc set + live runbook.
-- **Agents 05–08** — Documented: per-agent spec README and scaffold; build follows the 01–04 pattern.
+- **Agent 05 — Utilization Management** — built to reference depth (first payer-side agent): MCG/InterQual criteria, coverage (LCD/NCD), four-fifths fairness screen, criteria-grounded recommendation (MEETS/DOES_NOT_MEET/NEEDS_INFO), framework-enforced medical-director gate. `payer.issue_determination` withheld from every agent; an adverse recommendation is forwarded, never auto-denied. Full test suite + 4-doc set + live runbook.
+- **Agent 06 — Payment Integrity & Coding** — built to reference depth: code suggestion + NCCI/MUE validation + LCD/NCD necessity + 837 scrub; deterministic detection of upcoding/overpayment, bundling edits, duplicates, and unsupported necessity; framework-enforced reviewer gate. The agent FLAGS only — no recoupment, payment adjustment, or claim submission (submit_claim withheld). Full test suite + 4-doc set + live runbook.
+- **Agents 07–08** — Documented: per-agent spec README and scaffold; build follows the 01–06 pattern.
 
 ## Test status
-`74 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
+`96 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
 installed; it passes when it is). All run with **no API key**.
 
 Each agent is an independent deployable (own top-level `agent`/`tools` packages), so the
@@ -35,6 +37,8 @@ governance            — grounding, fairness, accessibility, HITL, red team, pr
 02-prior-authorization — requirement check, criteria grounding, gated submit, urgent (12)
 03-clinical-administration — chart-grounded draft, consent/Part 2, clinician sign-off (11)
 04-patient-access     — identity gate, GFE estimate, eligibility, gated book+register (12)
+05-utilization-management — criteria, fairness screen, recommendation, director gate, withheld determination (10)
+06-payment-integrity-coding — NCCI/MUE, upcoding/duplicate/necessity flags, reviewer gate, flag-only (12)
 ```
 
 ## Roadmap (next passes)
@@ -56,3 +60,7 @@ governance            — grounding, fairness, accessibility, HITL, red team, pr
 - **2026-06-25** — Agent 03 (Clinical-Administration) built to reference depth; 62 tests green across suites.
 - **2026-06-25** — Stamped out CloudFormation for Agent 03 (params + VpcCidr 10.32.0.0/16). cfn-lint clean.
 - **2026-06-25** — Agent 04 (Patient Access) built to reference depth; 74 tests green across suites.
+- **2026-06-25** — Stamped out CloudFormation for Agent 04 (params + VpcCidr 10.33.0.0/16). cfn-lint clean.
+- **2026-06-25** — Agent 05 (Utilization Management) built to reference depth; 84 tests green across suites.
+- **2026-06-25** — Stamped out CloudFormation for Agent 05 (params + VpcCidr 10.34.0.0/16). cfn-lint clean.
+- **2026-06-25** — Agent 06 (Payment Integrity & Coding) built to reference depth; 96 tests green across suites.

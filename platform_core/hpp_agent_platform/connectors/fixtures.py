@@ -113,19 +113,30 @@ _CODING = {
                                 "suggested_cpt": ["99214"], "suggested_icd10": ["E11.9", "I10"],
                                 "confidence": 0.93, "requires_coder_review": True},
     "validate_codes": lambda a: {"cpt": a.get("cpt", ["99214"]), "icd10": a.get("icd10", ["E11.9", "I10"]),
-                                 "ncci_edits": [], "mue_violations": [], "modifier_issues": [],
-                                 "valid": True},
+                                 # honor an NCCI/MUE flag for payment-integrity review scenarios
+                                 "ncci_edits": ([{"pair": "column1/column2", "reason": "bundled component billed separately"}]
+                                                if a.get("ncci") else []),
+                                 "mue_violations": ([{"code": (a.get("cpt") or ["?"])[0], "reason": "units exceed MUE"}]
+                                                    if a.get("mue") else []),
+                                 "modifier_issues": [],
+                                 "valid": not (a.get("ncci") or a.get("mue"))},
     "check_medical_necessity": lambda a: {"cpt": a.get("cpt", ["99214"]),
                                           "icd10": a.get("icd10", ["E11.9"]),
-                                          "policy": "LCD-L34567", "supported": True,
+                                          "policy": "LCD-L34567",
+                                          "supported": bool(a.get("supported", True)),
                                           "source": "CMS LCD/NCD coverage database"},
 }
 
 # ── Clinical criteria (MCG / InterQual) ──────────────────────────────────────
 _CRITERIA = {
     "evaluate": lambda a: {"service": a.get("service", "inpatient admission"),
-                           "criteria_set": "InterQual", "meets_criteria": True,
-                           "matched_indications": ["clinical instability documented"],
+                           "criteria_set": "InterQual",
+                           # honor an explicit outcome for review scenarios; defaults to meets
+                           "meets_criteria": bool(a.get("meets", True)),
+                           "matched_indications": (["clinical instability documented"]
+                                                   if a.get("meets", True) else []),
+                           "unmet_indications": ([] if a.get("meets", True)
+                                                 else ["criteria for the requested level of care not documented"]),
                            "requires_clinician_review": True},
     "get_guideline": lambda a: {"guideline_id": a.get("guideline_id", "MCG-IP-DM"),
                                 "title": "Inpatient admission — clinical indications",

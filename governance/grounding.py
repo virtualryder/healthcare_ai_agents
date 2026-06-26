@@ -115,7 +115,9 @@ def verify_grounding(text: str, state: Dict[str, Any]) -> GroundingReport:
                     "Within", "The", "This", "These", "Per", "From", "By", "Under", "Each", "Your",
                     "Re", "Claim", "Member", "Patient", "Account",
                     "Applying", "Using", "See", "Requested", "Requesting", "Submitting",
-                    "Citing", "Including", "Apply", "Note", "Request"}
+                    "Citing", "Including", "Apply", "Note", "Request",
+                    "Meets", "MEETS", "Guideline", "Recommendation", "Indications", "Coverage",
+                    "Evidence", "Unmet"}
     for ent in set(_ENTITY_RE.findall(text)):
         words = ent.split()
         while words and words[0] in leading_stop:

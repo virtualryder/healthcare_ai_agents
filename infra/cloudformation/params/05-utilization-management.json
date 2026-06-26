@@ -1,0 +1,7 @@
+[
+  {"ParameterKey": "AgentId", "ParameterValue": "05-utilization-management"},
+  {"ParameterKey": "Environment", "ParameterValue": "dev"},
+  {"ParameterKey": "GatewayMode", "ParameterValue": "portable"},
+  {"ParameterKey": "DeployMode", "ParameterValue": "native"},
+  {"ParameterKey": "VpcCidr", "ParameterValue": "10.34.0.0/16"}
+]

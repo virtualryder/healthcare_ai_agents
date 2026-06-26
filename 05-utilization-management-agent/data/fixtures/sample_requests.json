@@ -1,0 +1,16 @@
+[
+  {"case_id": "UM-1", "service": "inpatient admission", "cpt": ["99223"], "diagnosis": ["I50.9"],
+   "encounter_ref": "ENC-88231", "meets": true,
+   "cohort": {"selected": {"A": 50, "B": 48}, "totals": {"A": 100, "B": 100}},
+   "acting_user_claims": {"sub": "um-nurse-1", "custom:hpp_role": "UM_NURSE"}},
+  {"case_id": "UM-2", "service": "inpatient admission", "cpt": ["99223"], "diagnosis": ["I50.9"],
+   "encounter_ref": "ENC-88231", "meets": false,
+   "acting_user_claims": {"sub": "um-nurse-1", "custom:hpp_role": "UM_NURSE"}},
+  {"case_id": "UM-3", "service": "observation", "cpt": ["99224"], "diagnosis": ["R07.9"],
+   "encounter_ref": "ENC-88231", "missing_evidence": true,
+   "acting_user_claims": {"sub": "um-nurse-1", "custom:hpp_role": "UM_NURSE"}},
+  {"case_id": "UM-4", "service": "inpatient admission", "cpt": ["99223"], "diagnosis": ["I50.9"],
+   "encounter_ref": "ENC-88231", "meets": true,
+   "cohort": {"selected": {"A": 80, "B": 30}, "totals": {"A": 100, "B": 100}},
+   "acting_user_claims": {"sub": "um-nurse-1", "custom:hpp_role": "UM_NURSE"}}
+]

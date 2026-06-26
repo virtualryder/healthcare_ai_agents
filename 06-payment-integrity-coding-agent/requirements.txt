@@ -1,0 +1,7 @@
+# Agent 06 — Payment Integrity & Coding. Demo runs with NO API key (EXTRACT_MODE=demo).
+langgraph>=0.2.0
+# Platform core: pip install -e ../platform_core
+langchain-anthropic>=0.2 ; extra == "anthropic"
+langchain-aws>=0.2 ; extra == "bedrock"
+boto3>=1.34 ; extra == "bedrock"
+streamlit>=1.36
