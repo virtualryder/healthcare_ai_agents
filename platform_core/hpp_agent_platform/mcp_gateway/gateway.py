@@ -31,6 +31,8 @@ from typing import Any, Dict, List, Optional
 
 from . import policy as _policy
 from . import tokens as _tokens
+from .. import approvals as _approvals
+from .. import jwt_verify as _jwtv
 from .audit import GatewayAuditLog
 from .errors import ApprovalRequired, PolicyDenied
 
@@ -62,9 +64,12 @@ class GatewayResult:
 
 
 class MCPGateway:
-    def __init__(self, audit: Optional[GatewayAuditLog] = None, connector_mode: Optional[str] = None) -> None:
+    def __init__(self, audit: Optional[GatewayAuditLog] = None, connector_mode: Optional[str] = None,
+                 jwks: Optional[Dict[str, Any]] = None) -> None:
         self.audit = audit or GatewayAuditLog()
         self._connector_mode = connector_mode  # None -> CONNECTOR_MODE env (default fixture)
+        self._seen_jti: set = set()             # single-use approval replay guard (in-process)
+        self._jwks = jwks                       # JWKS for RS* JWT verification (prod)
 
     def invoke(
         self,
@@ -77,6 +82,7 @@ class MCPGateway:
         raise_on_deny: bool = False,
     ) -> GatewayResult:
         args = args or {}
+        user_claims = self._resolve_claims(user_claims or {})
         subject = (user_claims or {}).get("sub")
         roles = _roles_from_claims(user_claims or {})
 
@@ -102,7 +108,8 @@ class MCPGateway:
             return GatewayResult("DENY", tool, aid, reason=decision.reason)
 
         # 3. Human approval gate for high-risk (write/irreversible) tools
-        if decision.requires_approval and not self._approval_ok(approval):
+        if decision.requires_approval and not self._approval_ok(
+                approval, agent_id=agent_id, tool=tool, args=args, subject=subject):
             aid = self.audit.record({
                 "decision": "PENDING_APPROVAL", "tool": tool, "agent_id": agent_id,
                 "user": subject, "roles": roles,
@@ -142,13 +149,45 @@ class MCPGateway:
                              requires_approval=decision.requires_approval)
 
     # ── helpers ───────────────────────────────────────────────────────────────
-    @staticmethod
-    def _approval_ok(approval: Optional[Dict[str, Any]]) -> bool:
-        """A valid approval carries a verified reviewer identity and an approve decision."""
+    def _resolve_claims(self, user_claims: Dict[str, Any]) -> Dict[str, Any]:
+        """If a raw JWT is presented, verify it (RS*/JWKS) and use its claims; else
+        use the provided claim dict. AUTH_REQUIRE_JWT=1 denies a missing/invalid JWT."""
+        token = user_claims.get("jwt")
+        require = os.getenv("AUTH_REQUIRE_JWT", "").strip().lower() in ("1", "true", "yes")
+        if token and self._jwks is not None:
+            verified = _jwtv.verify_jwt(
+                token, jwks=self._jwks,
+                issuer=os.getenv("AUTH_JWT_ISSUER") or None,
+                audience=os.getenv("AUTH_JWT_AUDIENCE") or None,
+            )  # raises JWTError (fail closed) on any defect
+            return verified
+        if require:
+            raise _jwtv.JWTError("AUTH_REQUIRE_JWT set but no verifiable JWT/JWKS presented")
+        return user_claims
+
+    def _approval_ok(self, approval: Optional[Dict[str, Any]], *, agent_id: str, tool: str,
+                     args: Dict[str, Any], subject: Optional[str]) -> bool:
+        """Accept a high-risk write only on a valid approval.
+
+        Production path: a **bound, single-use, separation-of-duties** approval token
+        (`approval["token"]`) tied to this exact agent+tool+args and minted by the
+        reviewer service for a reviewer != requester. Demo/fixture path: an explicit
+        approve decision with a verified reviewer identity that still satisfies SoD.
+        """
         if not approval:
             return False
+        token = approval.get("token")
+        if token:
+            try:
+                _approvals.verify_approval(token, agent_id=agent_id, tool=tool, args=args,
+                                           requester_sub=subject or "", seen_jti=self._seen_jti)
+                return True
+            except _approvals.ApprovalError:
+                return False
         reviewer = approval.get("reviewer") or {}
-        return bool(approval.get("approved")) and bool(reviewer.get("sub"))
+        rsub = reviewer.get("sub")
+        # separation of duties even on the demo path: reviewer must differ from requester
+        return bool(approval.get("approved")) and bool(rsub) and rsub != subject
 
     def _invoke_connector(self, decision: "_policy.PolicyDecision", args: Dict[str, Any]) -> Any:
         from hpp_agent_platform.connectors import get_connector

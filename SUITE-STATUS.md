@@ -28,14 +28,14 @@
 **ALL 8 AGENTS BUILT.** CloudFormation stamped for all 8 (params CIDRs 10.30–10.37).
 
 ## Test status
-`121 passed across suites` (the skip is the LangGraph graph-wiring test when langgraph is not
-installed; it passes when it is). All run with **no API key**.
+`142 passed across suites` (no API key). Adds control-plane negative-case tests (JWT verification, bound SoD approvals, audit hash chain), the orchestration-platform journey tests, and the all-prompts-pinned test to the original 121.
 
 Each agent is an independent deployable (own top-level `agent`/`tools` packages), so the
 runner tests agents in separate pytest invocations: `bash scripts/run_tests.sh`.
 ```
-platform_core/tests   — gateway authz/HITL, PHI masking, connectors      (16)
-governance            — grounding, fairness, accessibility, HITL, red team, prompts (12)
+platform_core/tests   — gateway authz/HITL, PHI masking, connectors + SECURITY control-plane (30)
+governance            — grounding, fairness, accessibility, HITL, red team, prompts (14)
+care_platform         — saga+compensation, journeys, consent, authority-never-widens   (7)
 01-revenue-cycle-...  — denial classification, appeal grounding, HITL submission     (11)
 02-prior-authorization — requirement check, criteria grounding, gated submit, urgent (12)
 03-clinical-administration — chart-grounded draft, consent/Part 2, clinician sign-off (11)
@@ -51,7 +51,7 @@ governance            — grounding, fairness, accessibility, HITL, red team, pr
 - ✅ `infra/cloudformation` — 8 templates (cfn-lint clean) + per-agent params (CIDRs 10.30–10.37).
 - ✅ `infra/terraform` — module parity (network/security/data/connectors/gateway/agent-service) + per-agent tfvars.
 - ✅ `aws-native-reference` — per-agent Step Functions ASL with `waitForTaskToken` HITL gate.
-- ✅ `gtm` + `decks` — 10 AWS-style decks (8 per-agent + executive + CISO/CMIO), cited `HPP-DECK-SOURCES.md`, demo storyboard, seller cheatsheet, live-formula `roi-calculator/`.
+- ✅ `gtm` + `decks` — 11 AWS-style decks (8 per-agent + executive + CISO/CMIO + orchestration platform), AWS brand mark, leave-behind one-pagers, cited `HPP-DECK-SOURCES.md`, demo storyboard, seller cheatsheet, live-formula `roi-calculator/`.
 - ✅ `offerings` (11 docs) · `runbooks` (5) · `docs` (8: architecture, deploy-quickstart, WAF review, control mappings, briefings…).
 - ✅ `GETTING-STARTED.md`, `Makefile`, `CONTRIBUTING.md`; per-agent prompt-registry test.
 
@@ -74,3 +74,4 @@ Bedrock Guardrail tuning, penetration test, HITRUST/SOC 2 evidence assembly.
 - **2026-06-25** — Agent 05 (Utilization Management) built to reference depth; 84 tests green across suites.
 - **2026-06-25** — Stamped out CloudFormation for Agent 05 (params + VpcCidr 10.34.0.0/16). cfn-lint clean.
 - **2026-06-25** — Agent 06 (Payment Integrity- **2026-06-26** — GTM + ops layer complete: Terraform parity (8 .tf modules), AWS-native Step Functions ASL (8), 10 AWS-style decks + ROI calculator (xlsx) reframed per agent with recent cited data in the reference deck format, offerings (11), runbooks (5), docs (8). Polish: GETTING-STARTED + Makefile + CONTRIBUTING, per-agent prompt-pinning test, deploy quickstart with local-first + troubleshooting. **121 tests green; cfn-lint + HCL + ASL + decks all validate.**
+- **2026-06-26** — Depth pass to/beyond the SLG bar: hardened control plane (JWT verify, bound SoD approvals, hash-chained audit) + 14 negative-case tests; security package (6 docs); Care & Claims Orchestration Platform (saga+compensation+consent+events, 7 tests); CI (.github/workflows); CHANGELOG/VERSION/SOURCES/IMPROVEMENTS-OVER-SLG; AWS-brand decks + platform deck + leave-behinds; SA field guide + platform GTM + 8 agent handbooks + deployment-models/future-use-cases/account-prereqs; assessor-grade README + 8 deploy runbooks. **142 tests green; cfn-lint + HCL + ASL + CI all validate.**

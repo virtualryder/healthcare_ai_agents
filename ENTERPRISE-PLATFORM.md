@@ -1,42 +1,60 @@
-# HPP Enterprise Platform — The Story Beneath the Agents
+# HPP Enterprise Platform — the Care & Claims Orchestration layer
 
-The agents are interchangeable workloads. The asset that makes them deployable in a HIPAA
-environment is the platform: one governed control plane that carries all eight workloads.
+The eight agents each run standalone, with their own governed stack. The **Care & Claims
+Orchestration Platform** (`care_platform/hpp_care_platform/`) is the optional layer that
+coordinates them across a patient/member journey that spans the health system or plan — a
+**denial that becomes an appeal and a member notification**, an **admission that becomes a
+discharge draft, a care-plan update, and a follow-up visit**, a **new member onboarded** from
+eligibility through care-gap outreach.
 
-## 1. Why a governed access layer (not just LLM calls)
-An agent that *automates* a system of record — pulling a chart, submitting an appeal,
-updating a case — needs an enforcement point between it and that system. Without it you
-have ungoverned shadow AI touching PHI. The MCP authorization gateway is that point. It is
-the single place where minimum-necessary access, the human gate, scoped tokens, and the
-audit trail are enforced — in code, not policy prose.
+It adds five capabilities — and, deliberately, **nothing that widens authority**.
 
-## 2. Deny-by-default with least-privilege intersection
-`permitted(tool) ⇔ tool ∈ AGENT_TOOL_GRANTS[agent] ∩ ⋃ ROLE_ENTITLEMENTS[user_roles]`.
-An agent can never exceed the human on whose behalf it acts. Consequential authorities are
-withheld from agents entirely: a revenue-cycle agent cannot submit a claim; a UM agent
-cannot issue a determination. Those live only with human roles (`BILLER`,
-`UM_MEDICAL_DIRECTOR`). This is the technical expression of the posture CMS expects for AI
-in coverage decisions — AI assists, a human decides.
+## 1. Govern — the platform never bypasses the gateway (ADR-001)
+Every platform action runs through the **same MCP authorization gateway** with the **same
+acting-user claims** as the standalone agents (`care_platform/.../govern.py`). So the
+deny-by-default intersection, the bound human-approval gate, scoped tokens, and the PHI-masked
+audit apply identically to platform-initiated actions. A passing test asserts a journey step
+calling a withheld tool (`payer.issue_determination`) is denied — orchestration cannot escalate
+privilege. This is the single most important property: an A2A hop is a convenience, never a
+back door.
 
-## 3. The human gate is framework-enforced
-High-risk (write/irreversible) tools block until a verified reviewer identity is bound into
-the record. In LangGraph this is `interrupt_before=["human_review_gate"]`; in the AWS-native
-build it is a Step Functions `waitForTaskToken` task. Application code cannot bypass it.
+## 2. Canonical record + adapters
+One normalized view (`canonical.py`) of subject / plan / claim / encounter across the EHR,
+clearinghouse, payer, and contact center, so steps reason over consistent fields instead of
+re-deriving them from each connector's shape.
 
-## 4. PHI never leaks into logs or to external AI
-The PHI masker runs at every audit/trace boundary (HIPAA Safe Harbor identifiers). With
-`LLM_PROVIDER=bedrock`, inference runs in-account on HIPAA-eligible Amazon Bedrock under the
-AWS BAA — no PHI egress to an external AI API.
+## 3. Consent ledger — AAL-gated, 42 CFR Part 2 aware
+Before a journey discloses or acts on sensitive data it records and checks consent
+(`consent.py`): a sensitive scope (SUD / behavioral-health / 42 CFR Part 2) requires **AAL2**
+assurance and an explicit grant, else the journey **escalates** rather than proceeding.
 
-## 5. Orchestration stance — ADR-001
-**Decision:** in-process LangGraph today; an A2A hop through Amazon Bedrock AgentCore only
-when a workflow genuinely spans agents. An A2A hop does **not** widen authority — the
-downstream agent calls the same gateway with the same acting-user claims, so the
-intersection and human gates apply identically. A runnable reference hop is in
-`platform_core/hpp_agent_platform/a2a/`.
+## 4. Durable saga with compensation
+A journey is a saga (`saga.py`): steps run in order; if a step fails, the completed steps'
+**compensating actions run in reverse** — no half-finished journeys. A high-risk write
+**suspends** the journey at the human gate (just like the agent-level gate) rather than
+proceeding. The AWS-native form is a **Step Functions** state machine: compensation is a
+`Catch` → compensate path, the human gate is `waitForTaskToken`
+(`aws-native-reference/care-platform/`).
 
-## 6. From demo to production without code changes
-`EXTRACT_MODE` (demo/live), `CONNECTOR_MODE` (fixture/live), and `LLM_PROVIDER`
-(anthropic/bedrock) are the only switches. Connector method signatures are identical across
-modes; the gateway does not know which backend is live. The path from a no-API-key demo to
-an in-VPC Bedrock + live-connector deployment is configuration, not a rewrite.
+## 5. Compliance event bus
+Every forward and compensating step emits a **PHI-masked, hash-chained** evidence event
+(`events.py`, reusing the gateway's tamper-evident audit chain) — the auditable record a
+reviewer or regulator reads to reconstruct exactly what happened, step by step.
+
+## Journeys shipped
+| Journey | Agents spanned | Demonstrates |
+|---|---|---|
+| `denial_to_resolution` | 01 → 06 → 01 → 08 | gateway authority preserved; suspends at the denials-specialist + member-services gates |
+| `admission_to_followup` | 05 → 03 → 07 → 04 | clinician sign-off, care-manager sign-off, access-rep approval in sequence |
+| `new_member_onboarding` | 04 → 04 → 07 | eligibility → gated registration → care-gap identification |
+
+Run them (no API key):
+```bash
+PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py
+```
+
+## Stance — standalone first, platform when ready
+Adopt the platform **agent by agent**; the same agents become saga steps unchanged. Nothing in
+the platform requires giving an agent a tool it doesn't already hold — the orchestration is
+purely about sequencing governed actions and compensating cleanly when a downstream system
+fails. See `docs/DEPLOYMENT-MODELS.md`.

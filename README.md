@@ -1,393 +1,221 @@
 # HPP AI Agent Suite
-
 ### Governed AI Agents for Health Providers & Plans — Built on AWS
 
-![Tests](https://img.shields.io/badge/tests-121%20passing-brightgreen)
-![Agents](https://img.shields.io/badge/agents-8%2F8%20built-brightgreen)
-![CloudFormation](https://img.shields.io/badge/cfn--lint-passing-brightgreen)
-![Terraform](https://img.shields.io/badge/terraform-parity-brightgreen)
-![Maturity](https://img.shields.io/badge/maturity-Demonstrated%20%2B%20Deployable-orange)
-![HIPAA](https://img.shields.io/badge/HIPAA-BAA%20Required-red)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![License](https://img.shields.io/badge/license-proprietary-blue)
+[![CI](https://github.com/virtualryder/healthcare_ai_agents/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 
-> **The agents are not the product. The governed platform that makes them deployable, auditable, and HIPAA-defensible is.**
+> **The agents are not the product. The governance that makes them deployable, auditable, and HIPAA-defensible is.**
 
----
+A **reference accelerator** of **8 governed healthcare AI agents** — each a standalone reference
+architecture (own VPC, identity, data, and audit stack) — plus an optional **Care & Claims
+Orchestration Platform** that coordinates them across a patient/member journey. A **no-API-key
+automated test suite (142 tests)** exercises the control plane, including negative-case tests for
+cryptographic JWT verification, bound single-use approvals, the tamper-evident audit chain, and
+fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md` /
+`gtm/HPP-DECK-SOURCES.md`.
 
-## Status at a Glance
-
-All **8 agents are built to Demonstrated + Deployable-by-design** — working code, tests,
-docs, CloudFormation + Terraform templates, Step Functions rebuilds, and live Bedrock paths.
-**Production-readiness** (CSV/CSA, IdP integration, live-connector validation, penetration
-test, HITRUST) **is the engagement, not a day-one deliverable.**
-
-See [`SUITE-STATUS.md`](SUITE-STATUS.md) for the full feature matrix, test count breakdown,
-and changelog.
+> **Status & maturity (read first).** This is a **reference accelerator for discovery, architecture
+> workshops, and scoped pilots — not an AWS-authorized, HITRUST-certified, production-ready system.**
+> All 8 agents are deployable via CloudFormation (cfn-lint clean) and Terraform; inference is
+> in-account on **HIPAA-eligible Amazon Bedrock under an AWS BAA**; the human gate is real
+> (framework-enforced, bound approvals). **Live system-of-record connectors, IdP integration,
+> penetration testing, and HITRUST/SOC 2 authorization are customer-engagement work.** See
+> `docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md` (gap assessment + RACI).
 
 ---
 
-## Quick Navigation
+## ▶ Start here — what to read first
+1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the
+   142-test suite, then deploy into a new AWS account.
+2. **`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`** — honest gap assessment + RACI.
+3. **The security package** — `SECURITY.md`, `docs/THREAT-MODEL.md`,
+   `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md`,
+   `docs/INCIDENT-RESPONSE-AND-KEY-MANAGEMENT.md`.
+4. **`docs/DEPLOY-QUICKSTART.md`** — empty account → running governed agent, two commands.
 
-| I want to... | Start here |
+**I want to…** see it / pitch it → `decks/` (11 decks) + `decks/leave-behinds/` (one-pagers) +
+`gtm/SELLER-SA-FIELD-GUIDE.md` · deploy → `docs/DEPLOY-QUICKSTART.md` + `deliverables/agent-handbooks/`
+· review the security model → §3 + §3a + the security package · run the tests → `bash scripts/run_tests.sh`.
+
+---
+
+## 1. The need — what providers and health plans actually face
+The blocker is not the model. It is identity, authorization, audit, PHI isolation, accessibility,
+and *who has the authority to act* — before a single consequential action touches a claim, a chart,
+or a coverage decision. The pain is specific, documented, and expensive:
+
+| Workflow | The pain today (cited; evidence tier) |
 |---|---|
-| Run a demo on my laptop (no AWS, no API key) | [`GETTING-STARTED.md`](GETTING-STARTED.md) Step 1 |
-| Understand the architecture | [`docs/SUITE-ARCHITECTURE.md`](docs/SUITE-ARCHITECTURE.md) |
-| Deploy to AWS (CloudFormation) | [`docs/DEPLOY-QUICKSTART.md`](docs/DEPLOY-QUICKSTART.md) |
-| Deploy to AWS (Terraform) | [`infra/terraform/README.md`](infra/terraform/README.md) |
-| See what's built and what's not | [`SUITE-STATUS.md`](SUITE-STATUS.md) |
-| Understand the governance controls | [`governance/README.md`](governance/README.md) |
-| Review compliance & control mappings | [`docs/COMPLIANCE-CONTROL-MAPPINGS.md`](docs/COMPLIANCE-CONTROL-MAPPINGS.md) |
-| Review the shared responsibility model | [`docs/SHARED-RESPONSIBILITY-MATRIX.md`](docs/SHARED-RESPONSIBILITY-MATRIX.md) |
-| Run the full test suite (121 tests, no API key) | `make test` or `bash scripts/run_tests.sh` |
-| Build an AWS-native (Step Functions) variant | [`aws-native-reference/README.md`](aws-native-reference/README.md) |
-| Understand why the MCP layer exists | [`docs/WHY-THE-MCP-LAYER.md`](docs/WHY-THE-MCP-LAYER.md) |
-| See the pitch decks | [`decks/README.md`](decks/README.md) |
-| Sell this to a customer | [`SOLUTION-FIELD-GUIDE.md`](SOLUTION-FIELD-GUIDE.md) & [`offerings/`](offerings/) |
-| Run operational playbooks | [`runbooks/README.md`](runbooks/README.md) |
-| Contribute code | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Revenue cycle / denials | Initial denial rate **~11.8%** and climbing; U.S. hospitals spent **~$18B** in 2025 overturning denials; **35–60%** of denials never reworked **[INDUSTRY-RESEARCH]** |
+| Prior authorization | **~39 PAs/physician/week (~13 hrs)**; **94%** say PA delays care; FHIR PA APIs mandated by **Jan 1, 2027** (CMS-0057-F) **[ASSOCIATION] [GOV]** |
+| Clinical administration | Ambient-AI evidence: ambulatory burnout **51.9% → 38.8%** in 30 days; **~30 min/day** documentation saved **[PEER-REVIEWED]** |
+| Patient access | Outpatient no-show **23–33%**, **~$200**/missed appt, **~$150B/yr** to the U.S. system **[INDUSTRY-RESEARCH]** |
+| Utilization management | One insurer's post-acute denial rate rose **8.7% → 22.7%** after an AI tool (U.S. Senate, 2024); algorithmic UM under litigation **[GOV]** |
+| Payment integrity & coding | FY2025 improper payments: Medicare FFS **$28.8B**, Medicaid **$37.4B** **[GOV]** |
+| Care management | A widely used risk algorithm cut Black patients flagged for extra care by **>half** (Science, 2019) **[PEER-REVIEWED]** |
+| Member services | A healthcare live-agent call costs **~$25–$35**; AI deflects **~45%** of routine queries **[INDUSTRY-RESEARCH]** |
+
+Adoption signal: **>80% of health systems and 70% of health plans are prioritizing agentic AI**
+(Deloitte, Sep 2025) **[INDUSTRY-RESEARCH]**. Full citations: `gtm/HPP-DECK-SOURCES.md`.
 
 ---
 
-## Documentation by Role
+## 2. How this solves it
+**8 governed agents**, each a runnable workflow (intake → gather evidence → draft/assemble → compliance
+check → **human gate** → finalize), every system touch flowing through a deny-by-default gateway:
 
-| Role | Read first | Then explore |
-|---|---|---|
-| **Solution Architect / CTO** | [`README.md`](README.md) · [`docs/SUITE-ARCHITECTURE.md`](docs/SUITE-ARCHITECTURE.md) | [`ENTERPRISE-PLATFORM.md`](ENTERPRISE-PLATFORM.md) · [`docs/WELL-ARCHITECTED-REVIEW.md`](docs/WELL-ARCHITECTED-REVIEW.md) · [`docs/WHY-THE-MCP-LAYER.md`](docs/WHY-THE-MCP-LAYER.md) |
-| **DevOps / Platform Engineer** | [`GETTING-STARTED.md`](GETTING-STARTED.md) · [`docs/DEPLOY-QUICKSTART.md`](docs/DEPLOY-QUICKSTART.md) | [`infra/cloudformation/README.md`](infra/cloudformation/README.md) · [`infra/terraform/README.md`](infra/terraform/README.md) · [`runbooks/README.md`](runbooks/README.md) |
-| **Security / Compliance Officer** | [`docs/SHARED-RESPONSIBILITY-MATRIX.md`](docs/SHARED-RESPONSIBILITY-MATRIX.md) · [`docs/COMPLIANCE-CONTROL-MAPPINGS.md`](docs/COMPLIANCE-CONTROL-MAPPINGS.md) | [`governance/README.md`](governance/README.md) · [`docs/WELL-ARCHITECTED-REVIEW.md`](docs/WELL-ARCHITECTED-REVIEW.md) · [`docs/STAKEHOLDER-SECURITY-BRIEFINGS.md`](docs/STAKEHOLDER-SECURITY-BRIEFINGS.md) |
-| **Sales Engineer / Solutions Consultant** | [`SOLUTION-FIELD-GUIDE.md`](SOLUTION-FIELD-GUIDE.md) · [`gtm/SELLER-FIRST-MEETING-CHEATSHEET.md`](gtm/SELLER-FIRST-MEETING-CHEATSHEET.md) | [`offerings/`](offerings/) · [`decks/README.md`](decks/README.md) · [`gtm/DEMO-STORYBOARD.md`](gtm/DEMO-STORYBOARD.md) |
-| **Healthcare Domain Expert** | Agent-specific README (e.g., [`01-revenue-cycle-denial-agent/README.md`](01-revenue-cycle-denial-agent/README.md)) | Agent's `docs/` subdirectory · [`SOLUTION-FIELD-GUIDE.md`](SOLUTION-FIELD-GUIDE.md) |
-| **Developer / Contributor** | [`GETTING-STARTED.md`](GETTING-STARTED.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) | [`governance/README.md`](governance/README.md) · agent-specific code |
-| **Operator / On-call** | [`runbooks/README.md`](runbooks/README.md) | [Incident Response](runbooks/INCIDENT-RESPONSE.md) · [DR](runbooks/DR-RUNBOOK.md) · [HITL Queue](runbooks/HITL-QUEUE-OPERATIONS.md) · [Model Degradation](runbooks/MODEL-DEGRADATION-RESPONSE.md) |
-
----
-
-## Who Should Use This
-
-**Yes:**
-- **Systems Integrators** deploying AI into healthcare organizations — you need the governance + audit compliance layer
-- **Health Systems** (providers) piloting AI in revenue-cycle, clinical docs, or patient access workflows
-- **Health Plans** (payers) piloting AI in prior-auth, UM, claims, or member services
-- **AWS customers** with a HIPAA BAA and Bedrock access who want a reference accelerator
-- **Architecture & Security teams** who want to see deny-by-default, HITL gates, and PHI masking in practice
-
-**No:**
-- **Off-the-shelf SaaS seekers** — this is a decision-support accelerator, not a certified product
-- **Teams without AWS** — inference is tied to Anthropic API or Amazon Bedrock
-- **Autonomous execution** — every consequential action (claim submission, coverage determination, note signature) requires human approval
-
----
-
-## Quick Start
-
-New here? **[`GETTING-STARTED.md`](GETTING-STARTED.md)** is the front door — prove the
-flagship agent on your laptop with no API key, run the 121-test suite, then deploy into a
-new AWS account.
-
-```bash
-# Install
-make install                        # or: pip install -e platform_core && pip install langgraph streamlit
-
-# Demo any agent (no API key)
-make demo AGENT=01-revenue-cycle-denial   # or: cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py
-
-# Full test suite (121 tests, no API key)
-make test                           # or: bash scripts/run_tests.sh
-
-# Deploy to AWS
-scripts/build_lambdas.sh 01-revenue-cycle-denial
-scripts/deploy.sh 01-revenue-cycle-denial dev portable native s3://my-cfn-staging/hpp 10.30.0.0/16
-# Or with Terraform: cd infra/terraform && terraform apply -var-file=envs/01-revenue-cycle-denial.tfvars
-```
-
-See [`docs/DEPLOY-QUICKSTART.md`](docs/DEPLOY-QUICKSTART.md) for the full deployment path.
-
----
-
-## Positioning
-
-| What this is | What this is not |
-|---|---|
-| A governed, auditable accelerator — bring your own LLM call without the compliance scaffolding and you still have a prototype | A certified, validated, production-ready SaaS product you can hand to a customer unchanged |
-| Eight agents with shared platform controls that compound across the portfolio | Eight point tools built independently with no governance consistency |
-| A reference for Amazon Bedrock AgentCore Gateway + Identity + Runtime semantics — testable locally, deployable on AWS | A vendor lock-in — the gateway semantics are replicated in `platform_core/` so the logic is readable and testable without an AWS account |
-| Decision-support — drafts, assembles, monitors, flags — with humans owning every consequential decision (a determination, a submission, a signature) | Autonomous execution in clinical or coverage workflows |
-
----
-
-## Maturity Ladder
-
-Every agent and platform component is positioned honestly against four levels:
-
-| Level | Description | What it means |
-|---|---|---|
-| **Documented** | Architecture, workflow, and compliance design are written and reviewed | Useful for discovery and architecture review; not runnable |
-| **Demonstrated** | Code runs end-to-end in `EXTRACT_MODE=demo` (no API key, deterministic fixtures) | Proof of concept; suitable for internal demos and early customer workshops |
-| **Deployable** | Container contract (ARM64, `/invocations`, `/ping`) and CI pass; requires customer AWS account and Bedrock access | Suitable for a customer pilot with SI-managed infrastructure |
-| **Production-ready** | Customer computer-system validation (CSV/CSA), IdP integration, connectors tested against live systems, penetration test | Engagement milestone, not a day-one deliverable |
-
-All eight agents are built to **Demonstrated + Deployable-by-design**. All eight ship
-**CloudFormation + Terraform infra** (cfn-lint clean) and an **AWS-native Step Functions
-rebuild** with a `waitForTaskToken` human gate.
-
----
-
-## The Eight Agents
-
-| # | Agent | Problem it solves | Primary systems | Key regulations |
-|---|---|---|---|---|
-| **01** | [Revenue-Cycle & Denial](01-revenue-cycle-denial-agent/README.md) | Denials reached ~11.8% and climbing; hospitals spent ~$18B in 2025 overturning them and 35–60% of denials are never reworked | Patient accounting, clearinghouse (X12 837/835/277), payer portal, encoder, EHR/FHIR | HIPAA, CMS-0057-F, No Surprises Act, False Claims Act |
-| **02** | [Prior-Authorization](02-prior-authorization-agent/README.md) | ~39 PAs/physician/week (≈13 hrs); 94% say PA delays care; CMS mandates FHIR PA APIs by 2027 | Payer (Da Vinci CRD/DTR/PAS, X12 278), MCG/InterQual, EHR, IDP | CMS-0057-F, HIPAA, state PA-transparency laws |
-| **03** | [Clinical-Administration](03-clinical-administration-agent/README.md) | Documentation and inbox burden drive clinician burnout; summaries and drafts compress it | EHR/FHIR (HealthLake, Comprehend Medical), care plan, scheduling, consent | HIPAA, 21st Century Cures, 42 CFR Part 2 |
-| **04** | [Patient Access](04-patient-access-agent/README.md) | Access friction and registration errors drive leakage and downstream denials | Scheduling, registration, payer eligibility (270/271), identity | HIPAA, No Surprises Act, Section 1557 |
-| **05** | [Utilization Management](05-utilization-management-agent/README.md) | UM is high-volume and under AI scrutiny; the determination must stay human | MCG/InterQual, LCD/NCD, payer, EHR | CMS AI-in-UM guidance, ERISA, NCQA, MH Parity |
-| **06** | [Payment Integrity & Coding](06-payment-integrity-coding-agent/README.md) | Coding defects drive denials and FCA exposure; integrity recoveries are measurable | Encoder (NCCI/MUE, DRG), patient accounting, clearinghouse, EHR | HIPAA, CMS NCCI, False Claims Act, OIG |
-| **07** | [Care Management & Pop Health](07-care-management-pophealth-agent/README.md) | Value-based programs depend on care-gap closure and accurate risk capture | Care management, EHR/FHIR, SDOH, consent | HIPAA, CMS risk-adjustment integrity, NCQA, Section 1557, 42 CFR Part 2 |
-| **08** | [Contact Center / Member Services](08-contact-center-member-services-agent/README.md) | Member-service volume spikes around denials and benefits; grounded answers deflect it | Amazon Connect, payer (276/277, 270/271), identity, KB | HIPAA, Section 1557, TCPA |
-
-Each agent includes: LangGraph workflow, governed tool access, deterministic fixtures, test
-suite, Streamlit dashboard, four-document doc set (`docs/`), Dockerfile, demo, and a live
-Bedrock/connector path.
-
----
-
-## Shared Platform (`platform_core/hpp_agent_platform/`)
-
-Every agent shares the same platform stack. Controls compound: a governance improvement to
-the PHI masker, the grounding checker, or the audit trail benefits all eight agents at once.
-
-### LLM Factory
-Routes inference to **Anthropic Claude** (API) or **Amazon Bedrock** (in-account, under the
-AWS BAA, no PHI egress) by deployment mode. `EXTRACT_MODE=demo` bypasses the LLM for local
-testing. Bedrock Guardrails are mandatory in production (enforced in code).
-
-### PHI Masking (`phi.py`)
-Deterministic masking of HIPAA Safe Harbor identifiers (SSN, MRN, member/beneficiary ID,
-claim/account numbers, dates, contact info, addresses, payment cards) at every log/audit
-boundary. Code sets (ICD-10, CPT/HCPCS) and the NPI are preserved — they are non-PHI
-reference data the agents must reason over.
-
-### MCP Authorization Gateway (`mcp_gateway/`)
-The governed front door. **No agent calls a vendor system directly.** Every tool call
-passes one enforcement point: identity verification (fail-closed on missing subject);
-**deny-by-default authorization with least-privilege intersection** —
-`permitted(tool) ⇔ tool ∈ AGENT_TOOL_GRANTS[agent] ∩ ROLE_ENTITLEMENTS[user_roles]`, so an
-agent can never exceed the human; a **human-approval gate** on high-risk writes; short-lived
-**tool-scoped tokens** (no standing service accounts); and a **PHI-masked append-only audit**
-with lineage to the system reached. This is the reference logic for Amazon Bedrock
-AgentCore Gateway + Identity. Consequential authorities (`clearinghouse.submit_claim`,
-`payer.issue_determination`) are deliberately withheld from agents and held only by human
-roles.
-
-### Connector Framework (`connectors/`)
-One typed interface per system category (EHR, patient accounting, clearinghouse, payer,
-coding, clinical criteria, care plan, scheduling, registration, KB, identity, consent, IDP,
-contact center). Demo mode uses deterministic fixtures; live mode swaps in real adapters
-behind identical signatures — no agent code changes.
-
----
-
-## Governance Controls Matrix
-
-Every control is enforced in code and verified by automated tests — no API key required.
-
-| Control | Enforced by | Tested by | Status |
+| # | Agent | What it does | Human gate · the bright line |
 |---|---|---|---|
-| **Deny-by-default authorization** | `mcp_gateway/policy.py` | `platform_core/tests/test_gateway.py` | Passing |
-| **Least-privilege intersection** | `mcp_gateway/gateway.py` | Gateway authz tests | Passing |
-| **HITL gate (high-risk writes)** | LangGraph `interrupt_before` / Step Functions `waitForTaskToken` | `governance/tests/test_hitl_enforced.py` | Passing |
-| **PHI masking (Safe Harbor)** | `platform_core/hpp_agent_platform/phi.py` | `platform_core/tests/test_phi.py` | Passing |
-| **Grounding verification** | `governance/grounding.py` | `governance/tests/test_grounding.py` | Passing |
-| **Prompt version pinning** | `governance/prompt_manifest.json` | `governance/tests/test_prompt_registry.py` + `test_all_prompts_pinned.py` | Passing |
-| **Red team (injection/exfil/bypass)** | `governance/redteam/scenarios.py` | `governance/tests/test_redteam.py` | Passing |
-| **Fairness (four-fifths rule)** | `governance/fairness/disparate_impact.py` | `governance/tests/test_fairness.py` | Passing |
-| **Accessibility (WCAG 2.1 AA)** | `governance/accessibility/wcag.py` | `governance/tests/test_accessibility.py` | Passing |
-| **Control mappings** | `governance/controls/control_mappings.py` | Regime → control → AWS service | Reference |
+| **01** | Revenue-Cycle & Denial | Classifies denials, drafts grounded appeals | Denials Specialist · **never submits a claim** |
+| **02** | Prior-Authorization | Da Vinci requirement check, assembles + submits PA | PA Nurse · **coverage determination is the payer's** |
+| **03** | Clinical-Administration | Chart-grounded summaries, notes, discharge | Clinician sign-off · **draft only, no order entry** |
+| **04** | Patient Access | Eligibility, deterministic Good Faith Estimate, scheduling | Access Rep · **estimate is deterministic, not LLM; identity-gated** |
+| **05** | Utilization Management | MCG/InterQual criteria + fairness screen → recommendation | Medical Director · **issue_determination withheld from ALL agents; never auto-denies** |
+| **06** | Payment Integrity & Coding | NCCI/MUE, upcoding/duplicate detection | Reviewer · **flags only — no recoupment or submission** |
+| **07** | Care Management & Pop Health | Care gaps + HCC/RAF + SDOH + fairness screen | Care Manager · **risk never assigned autonomously** |
+| **08** | Contact Center / Member Services | Claim status/benefits on Amazon Connect; grievances | Member-Services Rep · **identity-gated; cannot submit an appeal** |
 
-See [`governance/README.md`](governance/README.md) for full details and
-[`docs/COMPLIANCE-CONTROL-MAPPINGS.md`](docs/COMPLIANCE-CONTROL-MAPPINGS.md) for the
-regime-level mapping (HIPAA, CMS-0057-F, No Surprises Act, Section 1557, 42 CFR Part 2).
+**The controls that make it deployable (this is the product):**
+1. **Cryptographic identity** — RS256/JWKS JWT verification with an algorithm allow-list and an
+   alg-confusion guard; client-supplied roles are never trusted (`platform_core/.../jwt_verify.py`).
+2. **Deny-by-default gateway, least-privilege intersection** — `permitted ⇔ agent grant ∩ user
+   entitlement`; the agent can never exceed the human (`mcp_gateway/policy.py`).
+3. **Consequential actions withheld in code** — submit-claim, issue-UM-determination, sign-note,
+   recoup-payment are absent from the agents' grants and proven by tests.
+4. **Bound, single-use, separation-of-duties approvals** — the approval token is cryptographically
+   tied to the exact tool + arguments, expires, cannot be replayed, and requires reviewer ≠ requester
+   (`approvals.py`).
+5. **Tamper-evident audit + WORM** — hash-chained append-only records (`verify_chain`), prod
+   conditional writes + IAM deny + S3 Object Lock; **PHI masked, fail-closed** at every boundary.
+6. **Private, in-account inference** — Amazon Bedrock under the AWS BAA via VPC endpoint, with
+   mandatory Guardrails — no PHI egress.
+
+Plus the **Care & Claims Orchestration Platform** (`care_platform/`) — a governed saga with
+compensation, an AAL-gated consent ledger (42 CFR Part 2), and a compliance event bus that ties
+agents across a journey **without widening authority** (`ENTERPRISE-PLATFORM.md`).
 
 ---
 
-## Infrastructure as Code
+## 3. Security architecture & how it satisfies the regulations
+```
+Workforce/members -> CloudFront + AWS WAF (OWASP rules, rate-limit) + Shield
+   -> API Gateway . Amazon Cognito (federates IdP -> short-lived RS256 JWT; gateway verifies it)
+   -> Agent runtime (Step Functions + Lambda, or Fargate / AgentCore Runtime) in a private subnet
+   -> MCP authorization gateway (re-verifies JWT + custom:hpp_role; deny-by-default; mints a scoped per-call token)
+   -> Amazon Bedrock (Claude) + Guardrails via VPC endpoint            [no PHI egress, under AWS BAA]
+   -> DynamoDB append-only hash-chained audit . S3 Object Lock (WORM) . KMS CMK
+Cross-cutting: CloudTrail . GuardDuty . Security Hub . Config . PHI masking at every boundary
+```
 
-The suite ships with **two IaC options** for all 8 agents. Pick one; both achieve the same governed architecture.
+| Regime | How it's addressed |
+|---|---|
+| **HIPAA Privacy/Security + AWS BAA** | Minimum-necessary at the gateway; PHI masking (Safe Harbor); hash-chained append-only audit; in-account Bedrock under BAA |
+| **42 CFR Part 2** | Consent check before sensitive disclosure; AAL-gated consent ledger; escalate without consent |
+| **CMS-0057-F** | Da Vinci-aligned payer connector (CRD/DTR/PAS); FHIR PA/status surfaces standardized by Jan 2027 |
+| **No Surprises Act** | Deterministic Good Faith Estimate tool (never the LLM) |
+| **Section 1557 / 21st Century Cures** | Health-literacy + accessibility checks on member output; EHI surfaced, never withheld |
+| **CMS AI-in-UM guidance** | `issue_determination` withheld from every agent; adverse recommendation forwarded, never auto-denied; four-fifths fairness screen |
+| **False Claims Act / OIG (coding)** | Payment-integrity agent flags only — no recoupment or submission |
+| **NIST AI RMF / 800-53 / OWASP-LLM / MITRE ATLAS** | `governance/`, `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md` |
 
-### Option 1: CloudFormation (Quick-start)
+Each control is **Implemented** (in the platform) or **Configurable** (the customer wires IdP,
+connectors, Guardrail policy, retention, and owns HITRUST/SOC 2 + CSV). Machine-readable mapping:
+`governance/controls/control_mappings.py`.
 
+## 3a. For the CIO, CISO & Director of Architecture — why this clears review
+The shared concern: **an AI agent that can touch systems of record is a governance, audit, and
+least-privilege problem before it is a model problem.** The controls below are implemented **and
+unit-tested** (not just described) — see `platform_core/tests/test_security_controls.py`.
+
+**CISO — concerns and how they're alleviated**
+- *"Could the AI take a consequential action on its own?"* No. Submit-claim / issue-determination /
+  sign-note / recoup are **withheld from the agent in code** and verified by tests; they execute only
+  after a **bound, single-use, separation-of-duties** approval (approver ≠ requester; the token is
+  cryptographically bound to the exact tool + arguments, expires, cannot be replayed).
+- *"Can I trust the identity and roles?"* Identity is **cryptographically verified** (RS256 over the
+  Cognito JWKS, with issuer/audience/expiry checks and an **alg-confusion guard** that rejects
+  `none`/`HS*`); client-supplied roles are never trusted. Authorization is **deny-by-default with
+  least privilege as an intersection**.
+- *"Will the audit trail hold up?"* It is **append-only and hash-chained** (`verify_chain` detects any
+  alteration), with **WORM (S3 Object Lock)** retention and **PHI masking that fails closed**. Every
+  attempt — allow, deny, pending-approval, error — is recorded with lineage.
+- *"Where does the data go?"* Inference stays **in-account** (Bedrock via VPC endpoint, under the AWS
+  BAA) with **Guardrails on input and output**. Mapping: `docs/NIST-800-53-CONTROL-MATRIX.md`; abuse
+  cases: `docs/THREAT-MODEL.md`; LLM risks: `docs/OWASP-LLM-ATLAS-MAPPING.md`.
+
+**Director of Architecture** — one governed pattern reused across eight agents: edge (CloudFront +
+WAF + Shield) → Cognito JWT → API Gateway → MCP gateway (deny-by-default + scoped per-call token) →
+Bedrock + Guardrails → human gate → append-only WORM audit. Full **IaC parity** (CloudFormation +
+Terraform), per-agent isolation (own VPC/KMS/Cognito/audit), native (Step Functions
+`waitForTaskToken`) or container (Fargate). Readable Python, standard AWS services — no black box.
+
+**CIO** — build the governance once and every future agent inherits it. Start with a low-blast-radius
+agent (Patient Access or Member Services), prove value against documented outcomes (§2), and scale on
+a paved road to compliant production. The honest gap assessment (§5) means no surprises in review.
+
+> **For assessors:** the security package maps every claim above to a testable control or a named
+> owner — `SECURITY.md`, `docs/THREAT-MODEL.md`, `docs/NIST-800-53-CONTROL-MATRIX.md`,
+> `docs/OWASP-LLM-ATLAS-MAPPING.md`, `docs/INCIDENT-RESPONSE-AND-KEY-MANAGEMENT.md`.
+
+---
+
+## 4. How to position it
+- **Standalone first, platform when ready.** One `scripts/deploy.sh <agent>` stands up a complete
+  isolated stack with **no platform dependency** (`docs/DEPLOYMENT-MODELS.md`). Grow agent by agent;
+  the orchestration platform is additive.
+- **Sellers & SAs:** `gtm/SELLER-SA-FIELD-GUIDE.md` (phased playbook + CISO security-review checklist),
+  `gtm/SELLER-FIRST-MEETING-CHEATSHEET.md`, `gtm/HPP-PLATFORM-GTM-STORY.md`.
+- **Decks (`decks/`):** 8 per-agent narrative decks (issue → cost → what customers see → how the
+  market solves it → how we solve it → why defensible) + an executive overview + a CISO/CMIO review +
+  the orchestration-platform deck, each with the AWS brand mark and grounded, cited figures.
+  One-page **leave-behinds** in `decks/leave-behinds/`.
+
+## 5. Production readiness — and who owns what
+**Honest status: a production-shaped accelerator, not an authorized, production-ready system — and it
+doesn't claim to be.** Verifiable today: consequential actions withheld in code + tested · framework-
+enforced human gate · cryptographic JWT verification · bound single-use SoD approvals · hash-chained
+append-only audit + WORM · PHI masking · complete AWS security architecture · no lock-in · a 142-test
+no-API-key suite incl. control-plane negative cases. Still required before go-live: **AWS BAA**, live
+connectors, IdP integration, Guardrail/red-team tuning, CSV/CSA validation, penetration test, DR game
+day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklist:**
+`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`.
+
+## What this is — and what it is not
+| This is | This is not |
+|---|---|
+| A governed, auditable **accelerator** with the hard controls built in and tested | A certified, HITRUST'd SaaS product you deploy unchanged |
+| A reference architecture + IaC you deploy into your account and **own** | A black-box dependency or turnkey integration |
+| Decision-support — drafts, assembles, flags, recommends — humans decide | Autonomous decisioning in clinical or coverage workflows |
+| Demonstrated + Deployable-by-design (no-API-key tests incl. control-plane negative cases) | Production-ready until the go-live checklist is met |
+
+## Repository map
+```
+README.md  GETTING-STARTED.md  ENTERPRISE-PLATFORM.md  SECURITY.md  SUITE-STATUS.md  SOURCES.md
+CHANGELOG.md  VERSION  CONTRIBUTING.md  IMPROVEMENTS-OVER-SLG.md  Makefile
+01-..08-*-agent/                       # 8 agents (code, tests, docs, deploy runbook, deck)
+platform_core/hpp_agent_platform/      # gateway, jwt_verify, approvals, audit(+sinks), masker, LLM factory, connectors, A2A
+care_platform/hpp_care_platform/       # govern, canonical, consent, saga, events, journeys (orchestration platform)
+governance/                            # grounding, prompts, evals, red team, fairness, accessibility, controls
+aws-native-reference/                  # Step Functions rebuilds (per agent + care-platform)
+infra/cloudformation/  infra/terraform/  # IaC (8 agents) — cfn-lint clean + Terraform parity
+docs/                                  # architecture, security package, deployment models, control mappings, deploy-quickstart
+gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds), offerings, ops runbooks, agent handbooks
+.github/workflows/ci.yml               # CI: tests + security + IaC lint
+```
+
+## Quick start
 ```bash
-scripts/build_lambdas.sh 01-revenue-cycle-denial
-scripts/deploy.sh 01-revenue-cycle-denial dev portable native s3://my-cfn-staging/hpp 10.30.0.0/16
+pip install -e platform_core && pip install langgraph streamlit cryptography
+bash scripts/run_tests.sh                                    # 142 tests, no API key
+cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py
+PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py
+# deploy to a new AWS account: docs/DEPLOY-QUICKSTART.md
 ```
 
-Master quickstart nests 7 stacks: network (VPC + Bedrock endpoint), security (KMS + Guardrail + Cognito), data (append-only audit + WORM Object Lock), connectors, dual gateway (portable + AgentCore), and agent-service (Step Functions HITL + Fargate). 8 templates pass cfn-lint clean. See [`infra/cloudformation/README.md`](infra/cloudformation/README.md).
-
-### Option 2: Terraform (Modular)
-
-```bash
-cd infra/terraform
-terraform init
-terraform apply -var-file=envs/01-revenue-cycle-denial.tfvars
-```
-
-Six modules (network, security, data, connectors, gateway, agent-service) with per-agent tfvars. See [`infra/terraform/README.md`](infra/terraform/README.md).
-
-### Deploy Mode: Container vs. Native
-
-- **Container mode:** LangGraph runtime on ECS Fargate / AgentCore. Portable across clouds.
-- **Native mode:** AWS Step Functions with `waitForTaskToken` HITL gates. AWS-only, deterministic state machine.
-
-See [`aws-native-reference/README.md`](aws-native-reference/README.md) for per-agent Step Functions ASL definitions.
-
----
-
-## AWS Service Choices
-
-| Layer | Service | Why |
-|---|---|---|
-| **In-account inference** | Amazon Bedrock | HIPAA-eligible, no PHI egress, data stays in VPC under AWS BAA |
-| **FHIR store** | Amazon HealthLake | Native FHIR R4, EHR interop |
-| **Contact center** | Amazon Connect | Integrated voice + chat for member services agent |
-| **Orchestration & HITL** | Step Functions + LangGraph | `waitForTaskToken` for named human gates; deterministic state machine |
-| **Data integrity & audit** | DynamoDB + S3 Object Lock | Append-only (deny Update/Delete), WORM (7-year retention), PITR |
-| **Encryption** | KMS CMK | Customer-managed keys for data at rest |
-| **Access control** | Cognito + STS | Identity federation, short-lived tokens, role-based entitlements |
-| **Guardrails** | Bedrock Guardrails | PII detection/masking, denied-topic filtering, grounding enforcement |
-| **Document extraction** | Bedrock Data Automation | Clinical-document extraction (structured + unstructured) |
-
----
-
-## Repository Structure
-
-```
-healthcare_ai_agents/
-├── GETTING-STARTED.md                   # 3-step onboarding: demo → test → deploy
-├── CONTRIBUTING.md                       # Conventions: agent isolation, no direct SDK calls, prompt pinning
-├── SUITE-STATUS.md                       # Feature matrix, test count, changelog
-├── ENTERPRISE-PLATFORM.md               # Deep architecture: ADR-001, orchestration, governed access layer
-├── SOLUTION-FIELD-GUIDE.md              # Per-buyer pitches, qualification questions, land-and-expand
-├── Makefile                              # Common tasks: install, test, demo, evals, lint, decks, roi
-│
-├── 01-revenue-cycle-denial-agent/       # Agent 01 — flagship (full depth + live path)
-├── 02-prior-authorization-agent/        # Agent 02 — full depth (Demonstrated + Deployable)
-├── 03-clinical-administration-agent/    # Agent 03 — full depth
-├── 04-patient-access-agent/             # Agent 04 — full depth
-├── 05-utilization-management-agent/     # Agent 05 — full depth
-├── 06-payment-integrity-coding-agent/   # Agent 06 — full depth
-├── 07-care-management-pophealth-agent/  # Agent 07 — full depth
-├── 08-contact-center-member-services-agent/  # Agent 08 — full depth
-│   └── (each agent: agent/ tools/ data/ demo/ docs/ tests/ Dockerfile app.py)
-│
-├── platform_core/                       # Shared platform: LLM factory, PHI masker, MCP gateway, connectors, A2A supervisor
-├── governance/                          # Grounding, prompt registry, evals, red team, fairness, accessibility, control mappings
-│
-├── docs/                                # Suite-level documentation
-│   ├── SUITE-ARCHITECTURE.md            #   Six-layer reference architecture and request path
-│   ├── DEPLOY-QUICKSTART.md             #   Empty account → running governed agent
-│   ├── COMPLIANCE-CONTROL-MAPPINGS.md   #   Regime → platform control → AWS service
-│   ├── SHARED-RESPONSIBILITY-MATRIX.md  #   AWS / SI / Customer responsibility divide
-│   ├── WELL-ARCHITECTED-REVIEW.md       #   AWS WAF review (all five pillars)
-│   ├── STAKEHOLDER-SECURITY-BRIEFINGS.md #  CISO, CMIO, and compliance officer briefings
-│   ├── WHY-THE-MCP-LAYER.md             #   Rationale for MCP gateway over direct LLM calls
-│   └── AWS-FUNDING-AND-GTM.md           #   AWS co-sell, ISV Accelerate, funding paths
-│
-├── infra/
-│   ├── cloudformation/                  # 8 nested stacks (cfn-lint clean) + per-agent params
-│   └── terraform/                       # 6 modules at parity + per-agent tfvars
-│
-├── aws-native-reference/                # Per-agent Step Functions ASL (waitForTaskToken HITL)
-│
-├── decks/                               # 10 AWS-style PowerPoint decks (8 per-agent + executive + CIO)
-├── gtm/                                 # Seller cheatsheet, demo storyboard, deck spec, ROI calculator
-├── offerings/                           # POC, pilot, assessment, managed service, SOW, battlecard, TCO, TPRM (11 docs)
-├── runbooks/                            # Incident response, DR, HITL queue ops, model degradation (4 playbooks)
-│
-└── scripts/                             # deploy.sh, build_lambdas.sh, run_tests.sh
-```
-
----
-
-## Complete Document Index
-
-### Architecture & Design
-- [`docs/SUITE-ARCHITECTURE.md`](docs/SUITE-ARCHITECTURE.md) — six-layer reference architecture, request path, AWS services
-- [`ENTERPRISE-PLATFORM.md`](ENTERPRISE-PLATFORM.md) — governed access layer, deny-by-default, HITL, PHI masking, orchestration (ADR-001)
-- [`docs/WHY-THE-MCP-LAYER.md`](docs/WHY-THE-MCP-LAYER.md) — rationale for MCP gateway over direct LLM calls
-
-### Deployment & Operations
-- [`GETTING-STARTED.md`](GETTING-STARTED.md) — 3 steps: demo on laptop, run test suite, deploy to AWS
-- [`docs/DEPLOY-QUICKSTART.md`](docs/DEPLOY-QUICKSTART.md) — empty account → running governed agent
-- [`infra/cloudformation/README.md`](infra/cloudformation/README.md) — CloudFormation templates, nesting strategy, per-agent params
-- [`infra/terraform/README.md`](infra/terraform/README.md) — Terraform modules, per-agent tfvars
-- [`aws-native-reference/README.md`](aws-native-reference/README.md) — Step Functions ASL rebuilds, container vs. native
-- [`runbooks/README.md`](runbooks/README.md) — operational playbooks (incident, DR, HITL queue, model degradation)
-
-### Compliance & Security
-- [`docs/COMPLIANCE-CONTROL-MAPPINGS.md`](docs/COMPLIANCE-CONTROL-MAPPINGS.md) — regime (HIPAA, CMS, etc.) → control → AWS service
-- [`docs/SHARED-RESPONSIBILITY-MATRIX.md`](docs/SHARED-RESPONSIBILITY-MATRIX.md) — AWS / SI / Customer divide
-- [`docs/WELL-ARCHITECTED-REVIEW.md`](docs/WELL-ARCHITECTED-REVIEW.md) — AWS WAF review (all five pillars)
-- [`docs/STAKEHOLDER-SECURITY-BRIEFINGS.md`](docs/STAKEHOLDER-SECURITY-BRIEFINGS.md) — CISO, CMIO, and compliance officer briefings
-- [`governance/README.md`](governance/README.md) — grounding, prompt registry, evals, red team, fairness, accessibility
-
-### Go-to-Market & Sales
-- [`SOLUTION-FIELD-GUIDE.md`](SOLUTION-FIELD-GUIDE.md) — per-buyer pitches, qualification questions, land-and-expand
-- [`gtm/SELLER-FIRST-MEETING-CHEATSHEET.md`](gtm/SELLER-FIRST-MEETING-CHEATSHEET.md) — 30-second pitch, proof points, qualifying questions
-- [`gtm/DEMO-STORYBOARD.md`](gtm/DEMO-STORYBOARD.md) — run-of-show for customer demos
-- [`gtm/DECK-CONTENT-SPEC.md`](gtm/DECK-CONTENT-SPEC.md) — deck content specification and slide structure
-- [`docs/AWS-FUNDING-AND-GTM.md`](docs/AWS-FUNDING-AND-GTM.md) — AWS co-sell, ISV Accelerate, funding paths
-- [`decks/README.md`](decks/README.md) — 10 AWS-style PowerPoint decks (8 per-agent + executive + CIO adoption)
-- [`gtm/roi-calculator/`](gtm/roi-calculator/) — ROI calculator workbook and build script
-
-### Consulting Offerings (11 documents)
-- [`offerings/POC-OFFERING.md`](offerings/POC-OFFERING.md) — proof-of-concept engagement structure
-- [`offerings/PILOT-OFFERING.md`](offerings/PILOT-OFFERING.md) — pilot engagement structure
-- [`offerings/ASSESSMENT-OFFERING.md`](offerings/ASSESSMENT-OFFERING.md) — readiness assessment
-- [`offerings/MANAGED-SERVICE-OFFERING.md`](offerings/MANAGED-SERVICE-OFFERING.md) — managed service model
-- [`offerings/SOW-TEMPLATE.md`](offerings/SOW-TEMPLATE.md) — statement of work template
-- [`offerings/BATTLECARD.md`](offerings/BATTLECARD.md) — competitive battlecard
-- [`offerings/COMPETITIVE-POSITIONING.md`](offerings/COMPETITIVE-POSITIONING.md) — market positioning
-- [`offerings/OBJECTION-HANDLING.md`](offerings/OBJECTION-HANDLING.md) — common objections and responses
-- [`offerings/COST-ROI-MODEL.md`](offerings/COST-ROI-MODEL.md) — cost and ROI model
-- [`offerings/TCO-MODEL.md`](offerings/TCO-MODEL.md) — total cost of ownership
-- [`offerings/TPRM-DUE-DILIGENCE-PACKET.md`](offerings/TPRM-DUE-DILIGENCE-PACKET.md) — third-party risk management
-
-### Contributing & Status
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — conventions: agent isolation, no direct SDK calls, prompt pinning
-- [`SUITE-STATUS.md`](SUITE-STATUS.md) — feature matrix, test count, changelog
-- [`Makefile`](Makefile) — `make install`, `make test`, `make demo`, `make evals`, `make lint-cfn`, `make decks`, `make roi`
-
----
-
-## Makefile Targets
-
-```bash
-make install      # Install platform_core (editable) + agent deps
-make test         # Run the full test suite (121 tests, no API key)
-make demo         # Run a deterministic agent demo (AGENT=01-revenue-cycle-denial)
-make evals        # Run the governance structural eval harness
-make lint-cfn     # cfn-lint all CloudFormation templates
-make decks        # Regenerate GTM decks (requires pptxgenjs)
-make roi          # Regenerate ROI calculator workbook
-make clean        # Remove __pycache__ and .pytest_cache
-```
-
----
-
-## Compliance Disclaimer
-
-This suite is a **decision-support accelerator** for qualified healthcare professionals. It
-is not a validated computer system, a certified medical device, or an approved coverage or
-billing system. AI-generated content requires human review and approval by a qualified
-professional before any consequential action — submitting a claim or appeal, issuing a
-coverage determination, signing a clinical note, or closing a case. The AI never takes
-irreversible actions autonomously.
-
-Customers are responsible for: computer-system validation (CSV/CSA) for the intended use;
-an AWS Business Associate Agreement; IdP integration and role mapping; connector validation
-against live systems; Bedrock Guardrail configuration appropriate to their population; and
-change-control procedures for prompt and model updates.
-
-This accelerator provides the control design. The customer operationalizes, validates, and
-accepts accountability for it.
+## Compliance disclaimer
+A **decision-support accelerator** for qualified healthcare professionals — not a certified system, a
+medical device, or an approved coverage/billing tool. AI-generated content requires human review
+before any consequential action — submitting a claim or appeal, issuing a coverage determination,
+signing a clinical note, or closing a case; the AI never takes irreversible action autonomously.
+Customers own the AWS BAA, IdP integration, connector validation, Guardrail configuration, retention
+schedule, CSV/CSA for the intended use, and HITRUST/SOC 2 authorization. See
+`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`.

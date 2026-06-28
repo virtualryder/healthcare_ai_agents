@@ -1,0 +1,56 @@
+name: CI
+on:
+  push: {branches: [main]}
+  pull_request: {branches: [main]}
+
+jobs:
+  tests:
+    name: Tests (no API key) — agents · governance · platform · security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e platform_core
+          pip install pytest cryptography "langgraph>=0.2"
+      - name: Full suite (per-agent isolation)
+        run: bash scripts/run_tests.sh
+      - name: Governance eval harness
+        run: PYTHONPATH=platform_core:. python -m governance.evals.run_evals
+
+  security:
+    name: Security control-plane (negative cases) + prompt-pin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install
+        run: pip install -e platform_core && pip install pytest cryptography
+      - name: Control-plane negative-case tests
+        run: PYTHONPATH=platform_core:. python -m pytest platform_core/tests/test_security_controls.py -q
+      - name: Red team (injection / PHI-exfil / authz-bypass)
+        run: PYTHONPATH=platform_core:. python -m pytest governance/tests/test_redteam.py -q
+      - name: Prompt registry — all prompts hash-pinned (no drift)
+        run: PYTHONPATH=platform_core:. python -m pytest governance/tests/test_all_prompts_pinned.py -q
+
+  infra:
+    name: IaC lint — CloudFormation · Terraform · Step Functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install linters
+        run: pip install cfn-lint python-hcl2
+      - name: cfn-lint (CloudFormation, all 8 agents)
+        run: cfn-lint infra/cloudformation/*.yaml
+      - name: Terraform HCL parses
+        run: |
+          python -c "import hcl2, glob; [hcl2.load(open(f)) for f in glob.glob('infra/terraform/**/*.tf', recursive=True)]; print('terraform OK')"
+      - name: Step Functions ASL valid JSON
+        run: |
+          python -c "import json, glob; [json.load(open(f)) for f in glob.glob('aws-native-reference/**/*.asl.json', recursive=True)]; print('ASL OK')"

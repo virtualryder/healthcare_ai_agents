@@ -17,6 +17,7 @@ model is testable without AWS.
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
 import json
 import os
 import uuid
@@ -35,10 +36,21 @@ def _mask_args(args: Any) -> Any:
     return args
 
 
+def _chain_hash(record: Dict[str, Any], prev_hash: str) -> str:
+    body = json.dumps(record, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256((prev_hash + body).encode()).hexdigest()
+
+
 class GatewayAuditLog:
+    """Append-only, PHI-masked, hash-chained audit. Each record seals over the
+    previous record's hash, so removing or altering any entry breaks the chain
+    (`verify_chain`). Production swaps the list for DynamoDB (deny Update/Delete) +
+    S3 Object Lock — see hpp_agent_platform.audit_sinks."""
+
     def __init__(self, jsonl_path: Optional[str] = None) -> None:
         self.records: List[Dict[str, Any]] = []
         self._path = jsonl_path or os.getenv("GATEWAY_AUDIT_JSONL")
+        self._last_hash = "0" * 64
 
     def record(self, entry: Dict[str, Any]) -> str:
         audit_id = str(uuid.uuid4())
@@ -51,8 +63,23 @@ class GatewayAuditLog:
             full["args"] = _mask_args(full["args"])
         if "detail" in full and isinstance(full["detail"], str):
             full["detail"] = mask(full["detail"])
+        # hash over the record BODY (pre-prev_hash/hash), chained on the previous hash
+        prev = self._last_hash
+        h = _chain_hash(full, prev)
+        full["prev_hash"] = prev
+        full["hash"] = h
+        self._last_hash = h
         self.records.append(full)
         if self._path:  # pragma: no cover - file IO
             with open(self._path, "a", encoding="utf-8") as fh:
                 fh.write(json.dumps(full) + "\n")
         return audit_id
+
+    def verify_chain(self) -> bool:
+        prev = "0" * 64
+        for r in self.records:
+            body = {k: v for k, v in r.items() if k not in ("prev_hash", "hash")}
+            if r.get("prev_hash") != prev or r.get("hash") != _chain_hash(body, prev):
+                return False
+            prev = r["hash"]
+        return True

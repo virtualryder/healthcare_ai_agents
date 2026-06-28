@@ -10,3 +10,5 @@ supervisor — is what makes the agents deployable, auditable, and HIPAA-defensi
 in a provider or health-plan environment.
 """
 __version__ = "0.1.0"
+
+from . import jwt_verify, approvals, audit_sinks  # noqa: E402,F401

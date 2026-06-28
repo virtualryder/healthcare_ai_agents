@@ -9,6 +9,7 @@ figure traced to `../gtm/HPP-DECK-SOURCES.md`. 16:9, AWS palette (orange #FF9900
 | `HPP-01..08-*.pptx` | 6 each | Title · The Issue & What It Costs · What Customers Are Seeing (and how the market solves it) · How We Solve It (governed, human-decided) · AWS Architecture & Traffic Flow · Why This Is Defensible |
 | `HPP-Agentic-AI-Suite-Executive-Overview.pptx` | 4 | Thesis · stakes · 8-agent portfolio · why defensible |
 | `HPP-CIO-Adoption-Review.pptx` | 3 | Six gateway controls · withheld authorities · phased path |
+| `HPP-Care-Claims-Orchestration-Platform.pptx` | 6 | The orchestration platform: journeys, saga + compensation, consent, authority-never-widens |
 
 Each per-agent deck frames the **current issue**, its **cost**, **what customers are seeing**,
 **how the market is solving it**, and **how we solve it** — grounded in recent (2024–2026) data.
@@ -20,3 +21,6 @@ NODE_PATH=$(npm root -g) node build-agent-decks.js
 ```
 Edit `deck-data.js` to change an agent's story; edit the source figures in
 `../gtm/HPP-DECK-SOURCES.md` and re-tag `../gtm/DECK-CONTENT-SPEC.md`.
+
+## AWS brand mark & leave-behinds
+Every deck carries an AWS brand mark (top-right); drop the official logo at `assets/aws-logo.png` to use it (see `assets/README.md`). One-page PDF **leave-behinds** per agent are in `leave-behinds/` (`build-leave-behinds.js`).
