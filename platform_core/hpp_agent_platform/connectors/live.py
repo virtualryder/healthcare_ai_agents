@@ -47,6 +47,6 @@ class LiveHttpConnector(Connector):
             url = f"{self.base_url}/{method}"
             data = json.dumps(kwargs).encode()
             req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # nosec B310 — URL from operator config, not user input
                 return json.loads(resp.read().decode())
         return _call

@@ -126,7 +126,7 @@ def _urllib_transport(url: str, *, method_http: str, headers: Dict[str, str],
                       body: bytes, timeout: float) -> Tuple[int, bytes]:  # pragma: no cover - network
     req = urllib.request.Request(url, data=body, headers=headers, method=method_http)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — URL from operator config, not user input
             return resp.getcode(), resp.read()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read()
