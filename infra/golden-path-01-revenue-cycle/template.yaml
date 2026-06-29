@@ -309,6 +309,9 @@ Resources:
         - Statement:
             - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
+            # Resume the paused Step Functions execution after minting the bound token.
+            # SendTaskSuccess is not resource-scopable, so it must be "*".
+            - {Effect: Allow, Action: [states:SendTaskSuccess, states:SendTaskFailure], Resource: "*"}
       Events:
         Approve:
           Type: HttpApi
@@ -323,6 +326,135 @@ Resources:
             Method: GET
             Path: "/approvals/ping"
             Auth: {Authorizer: NONE}
+
+  # Controlled outbox — approved appeals are EXPORTED here (a queue a biller works), not
+  # auto-transmitted to the payer. Minimizes blast radius for the first deployable version.
+  AppealOutbox:
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsMasterKeyId: !Ref AgentKey
+      MessageRetentionPeriod: 1209600
+
+  # The workflow task logic — every step runs THROUGH the governed gateway. Invoked only by
+  # the state machine (no HTTP events). Its own least-privilege role.
+  WorkflowFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: workflow.handler
+      CodeUri: src/
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - Statement:
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
+            - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
+            - !If
+              - HasBedrockModel
+              - {Effect: Allow, Action: [bedrock:InvokeModel], Resource: !Ref BedrockModelArn}
+              - !Ref AWS::NoValue
+
+  # Real denial workflow: load -> analyze -> (appealable?) -> gather -> draft -> compliance ->
+  # waitForTaskToken HUMAN GATE -> (approved?) -> finalize (governed write w/ bound token) ->
+  # export to the controlled outbox. No Pass placeholders.
+  DenialWorkflow:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      Tracing: {Enabled: true}
+      Policies:
+        - LambdaInvokePolicy: {FunctionName: !Ref WorkflowFn}
+        - SQSSendMessagePolicy: {QueueName: !GetAtt AppealOutbox.QueueName}
+      DefinitionSubstitutions:
+        WorkflowFnArn: !GetAtt WorkflowFn.Arn
+        OutboxUrl: !Ref AppealOutbox
+      Definition:
+        Comment: "HPP Agent 01 denial workflow — governed tasks + waitForTaskToken human gate."
+        StartAt: LoadClaim
+        States:
+          LoadClaim:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: "${WorkflowFnArn}", Payload: {step: load_claim, "state.$": "$"}}
+            OutputPath: "$.Payload"
+            Retry: [{ErrorEquals: [States.TaskFailed], MaxAttempts: 2, IntervalSeconds: 2, BackoffRate: 2.0}]
+            Catch: [{ErrorEquals: [States.ALL], Next: WorkflowFailed}]
+            Next: AnalyzeDenial
+          AnalyzeDenial:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: "${WorkflowFnArn}", Payload: {step: analyze_denial, "state.$": "$"}}
+            OutputPath: "$.Payload"
+            Catch: [{ErrorEquals: [States.ALL], Next: WorkflowFailed}]
+            Next: AppealableChoice
+          AppealableChoice:
+            Type: Choice
+            Choices: [{Variable: "$.analysis.appealable", BooleanEquals: true, Next: GatherEvidence}]
+            Default: NotAppealable
+          GatherEvidence:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: "${WorkflowFnArn}", Payload: {step: gather_evidence, "state.$": "$"}}
+            OutputPath: "$.Payload"
+            Catch: [{ErrorEquals: [States.ALL], Next: WorkflowFailed}]
+            Next: DraftAppeal
+          DraftAppeal:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: "${WorkflowFnArn}", Payload: {step: draft_appeal, "state.$": "$"}}
+            OutputPath: "$.Payload"
+            Catch: [{ErrorEquals: [States.ALL], Next: WorkflowFailed}]
+            Next: ComplianceCheck
+          ComplianceCheck:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: "${WorkflowFnArn}", Payload: {step: compliance_check, "state.$": "$"}}
+            OutputPath: "$.Payload"
+            Catch: [{ErrorEquals: [States.ALL], Next: WorkflowFailed}]
+            Next: ComplianceChoice
+          ComplianceChoice:
+            Type: Choice
+            Choices: [{Variable: "$.compliance.ok", BooleanEquals: true, Next: HumanReviewGate}]
+            Default: ComplianceFailed
+          HumanReviewGate:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
+            Parameters:
+              FunctionName: "${WorkflowFnArn}"
+              Payload: {step: persist_review, "state.$": "$", "task_token.$": "$$.Task.Token"}
+            ResultPath: "$.approval"
+            TimeoutSeconds: 86400
+            Catch: [{ErrorEquals: [States.ALL], Next: ReviewRejected}]
+            Next: ApprovedChoice
+          ApprovedChoice:
+            Type: Choice
+            Choices: [{Variable: "$.approval.token", IsPresent: true, Next: Finalize}]
+            Default: ReviewRejected
+          Finalize:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters: {FunctionName: "${WorkflowFnArn}", Payload: {step: finalize, "state.$": "$"}}
+            OutputPath: "$.Payload"
+            Catch: [{ErrorEquals: [States.ALL], Next: WorkflowFailed}]
+            Next: SendToOutbox
+          SendToOutbox:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage
+            Parameters: {QueueUrl: "${OutboxUrl}", "MessageBody.$": "States.JsonToString($.finalize)"}
+            End: true
+          NotAppealable:
+            Type: Succeed
+          ComplianceFailed:
+            Type: Fail
+            Error: ComplianceCheckFailed
+            Cause: "Draft appeal not grounded in gathered evidence"
+          ReviewRejected:
+            Type: Fail
+            Error: HumanReviewRejected
+            Cause: "Reviewer did not approve the appeal (or the gate timed out)"
+          WorkflowFailed:
+            Type: Fail
+            Error: WorkflowError
+            Cause: "A governed task failed; see execution history + the append-only audit"
 
 Outputs:
   GatewayUrl:
@@ -340,3 +472,5 @@ Outputs:
   AuditTableName: {Value: !Ref AuditTable}
   HitlTableName: {Value: !Ref HitlTable}
   JtiTableName: {Value: !Ref JtiTable}
+  StateMachineArn: {Value: !Ref DenialWorkflow}
+  AppealOutboxUrl: {Value: !Ref AppealOutbox}

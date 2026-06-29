@@ -11,6 +11,7 @@ run() { echo "=== $1 ==="; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$2" python -m p
 
 run "platform + governance" "platform_core:." "platform_core/tests governance"
 run "care_platform (orchestration)" "platform_core:care_platform:." "care_platform/hpp_care_platform/tests"
+run "golden-path workflow (Agent 01)" "platform_core:." "infra/golden-path-01-revenue-cycle/tests"
 for a in 01-revenue-cycle-denial-agent 02-prior-authorization-agent 03-clinical-administration-agent 04-patient-access-agent 05-utilization-management-agent 06-payment-integrity-coding-agent 07-care-management-pophealth-agent 08-contact-center-member-services-agent; do
   [ -d "$a/tests" ] && run "$a" "platform_core:$a:." "$a/tests"
 done

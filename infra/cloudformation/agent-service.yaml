@@ -1,10 +1,13 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  HPP Suite - Agent service. native = Step Functions + Lambda with a waitForTaskToken HITL
-  gate (the denials-specialist / PA-nurse / medical-director approval resumes the machine);
-  container = ECS Fargate / AgentCore Runtime running the LangGraph agent unchanged
-  (ARM64, /invocations + /ping). The human gate is enforced by the state machine, not by
-  application code.
+  HPP Suite - Agent service. native = Step Functions + Lambda with REAL governed task states
+  and a waitForTaskToken HITL gate (the denials-specialist / PA-nurse / medical-director
+  approval resumes the machine); container = ECS Fargate / AgentCore Runtime running the
+  LangGraph agent unchanged (ARM64, /invocations + /ping). The human gate is enforced by the
+  state machine, not by application code. The connector Lambda bundles the workflow dispatcher
+  (handler routes on the "step" field). The INTEGRATION-TESTED reference for this exact flow is
+  the SAM golden path at infra/golden-path-01-revenue-cycle/ (with its unit tests + acceptance
+  tests); this nested template provisions the same shape inside the full suite stack.
 Parameters:
   AgentId: {Type: String, Default: 01-revenue-cycle-denial}
   Environment: {Type: String, Default: dev}
@@ -22,18 +25,88 @@ Resources:
       RoleArn: !Ref AgentRoleArn
       DefinitionString: !Sub |
         {
-          "Comment": "HPP ${AgentId} - deterministic core + Bedrock drafting + waitForTaskToken HITL. Deploy the full ASL from aws-native-reference/${AgentId}/stepfunctions/ (roadmap).",
-          "StartAt": "LoadAndAnalyze",
+          "Comment": "HPP ${AgentId} - governed denial workflow: deterministic tasks through the MCP gateway + waitForTaskToken HITL gate. No Pass placeholders.",
+          "StartAt": "LoadClaim",
           "States": {
-            "LoadAndAnalyze": {"Type": "Pass", "Comment": "load_claim -> analyze_denial -> gather_evidence -> draft_appeal -> compliance_check (Lambda tasks)", "Next": "HumanReviewGate"},
+            "LoadClaim": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "load_claim", "state.$": "$"}},
+              "OutputPath": "$.Payload",
+              "Retry": [{"ErrorEquals": ["States.TaskFailed"], "MaxAttempts": 2, "IntervalSeconds": 2, "BackoffRate": 2.0}],
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "WorkflowFailed"}],
+              "Next": "AnalyzeDenial"
+            },
+            "AnalyzeDenial": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "analyze_denial", "state.$": "$"}},
+              "OutputPath": "$.Payload",
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "WorkflowFailed"}],
+              "Next": "AppealableChoice"
+            },
+            "AppealableChoice": {
+              "Type": "Choice",
+              "Choices": [{"Variable": "$.analysis.appealable", "BooleanEquals": true, "Next": "GatherEvidence"}],
+              "Default": "NotAppealable"
+            },
+            "GatherEvidence": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "gather_evidence", "state.$": "$"}},
+              "OutputPath": "$.Payload",
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "WorkflowFailed"}],
+              "Next": "DraftAppeal"
+            },
+            "DraftAppeal": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "draft_appeal", "state.$": "$"}},
+              "OutputPath": "$.Payload",
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "WorkflowFailed"}],
+              "Next": "ComplianceCheck"
+            },
+            "ComplianceCheck": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "compliance_check", "state.$": "$"}},
+              "OutputPath": "$.Payload",
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "WorkflowFailed"}],
+              "Next": "ComplianceChoice"
+            },
+            "ComplianceChoice": {
+              "Type": "Choice",
+              "Choices": [{"Variable": "$.compliance.ok", "BooleanEquals": true, "Next": "HumanReviewGate"}],
+              "Default": "ComplianceFailed"
+            },
             "HumanReviewGate": {
               "Type": "Task",
               "Resource": "arn:${AWS::Partition}:states:::lambda:invoke.waitForTaskToken",
-              "Comment": "Blocks until a verified reviewer approves; mirrors interrupt_before in the LangGraph build.",
-              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"taskToken.$": "$$.Task.Token", "hitlTable": "${HitlTableName}"}},
-              "Next": "Finalize"
+              "Comment": "Blocks until a verified reviewer approves; mirrors interrupt_before in the LangGraph build. The reviewer service mints a bound, single-use token and resumes with SendTaskSuccess.",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "persist_review", "state.$": "$", "task_token.$": "$$.Task.Token", "hitlTable": "${HitlTableName}"}},
+              "ResultPath": "$.approval",
+              "TimeoutSeconds": 86400,
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "ReviewRejected"}],
+              "Next": "ApprovedChoice"
             },
-            "Finalize": {"Type": "Pass", "Comment": "submit appeal / queue resubmit / escalate; write PHI-masked audit", "End": true}
+            "ApprovedChoice": {
+              "Type": "Choice",
+              "Choices": [{"Variable": "$.approval.token", "IsPresent": true, "Next": "Finalize"}],
+              "Default": "ReviewRejected"
+            },
+            "Finalize": {
+              "Type": "Task",
+              "Resource": "arn:${AWS::Partition}:states:::lambda:invoke",
+              "Comment": "Governed write THROUGH the gateway using the bound approval token (SoD + single-use + arg-binding); PHI-masked audit.",
+              "Parameters": {"FunctionName": "hpp-${AgentId}-${Environment}-connector", "Payload": {"step": "finalize", "state.$": "$"}},
+              "OutputPath": "$.Payload",
+              "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "WorkflowFailed"}],
+              "End": true
+            },
+            "NotAppealable": {"Type": "Succeed"},
+            "ComplianceFailed": {"Type": "Fail", "Error": "ComplianceCheckFailed", "Cause": "Draft appeal not grounded in gathered evidence"},
+            "ReviewRejected": {"Type": "Fail", "Error": "HumanReviewRejected", "Cause": "Reviewer did not approve (or the gate timed out)"},
+            "WorkflowFailed": {"Type": "Fail", "Error": "WorkflowError", "Cause": "A governed task failed; see execution history + the append-only audit"}
           }
         }
 Outputs:

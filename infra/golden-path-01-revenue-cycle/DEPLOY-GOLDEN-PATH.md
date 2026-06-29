@@ -31,6 +31,48 @@ authorizer**, the **governed connector Lambda** (the tool route runs through the
   - `POST /tool/clearinghouse/submit_claim` → **DENY** (withheld from the agent — a biller submits).
 - Every attempt lands in the append-only audit table.
 
+## The async denial workflow (Step Functions)
+The deploy also creates a **Standard state machine** (`StateMachineArn` output) that runs the real
+denial pipeline — no `Pass` placeholders:
+
+`LoadClaim → AnalyzeDenial → (appealable?) → GatherEvidence → DraftAppeal → ComplianceCheck →
+(grounded?) → HumanReviewGate [waitForTaskToken] → (approved?) → Finalize → SendToOutbox`
+
+Every task runs through the governed gateway (`WorkflowFn`), so the orchestration inherits
+deny-by-default authz, scoped tokens, and the append-only audit. The human gate uses
+`waitForTaskToken`: the workflow records `{review_id, task_token, pending_write}` to the HITL
+table and pauses. The approved appeal is **exported to a controlled SQS outbox** (`AppealOutboxUrl`)
+for a biller to transmit — it is not auto-submitted to the payer.
+
+Run it end-to-end:
+
+```bash
+SM=$(aws cloudformation describe-stacks --stack-name hpp-gp01-dev \
+  --query "Stacks[0].Outputs[?OutputKey=='StateMachineArn'].OutputValue" --output text)
+HITL=$(aws cloudformation describe-stacks --stack-name hpp-gp01-dev \
+  --query "Stacks[0].Outputs[?OutputKey=='HitlTableName'].OutputValue" --output text)
+APPROVALS=$(aws cloudformation describe-stacks --stack-name hpp-gp01-dev \
+  --query "Stacks[0].Outputs[?OutputKey=='ApprovalsUrl'].OutputValue" --output text)
+
+# 1) start a denial workflow for a requester (DENIALS_SPECIALIST)
+aws stepfunctions start-execution --state-machine-arn "$SM" \
+  --input '{"claim_ref":"CLM-2026-55810","user_claims":{"sub":"u-requester","custom:hpp_role":"DENIALS_SPECIALIST"}}'
+
+# 2) the workflow pauses at HumanReviewGate — find the PENDING review_id
+aws dynamodb scan --table-name "$HITL" --filter-expression "#s = :p" \
+  --expression-attribute-names '{"#s":"status"}' --expression-attribute-values '{":p":{"S":"PENDING"}}'
+
+# 3) a DIFFERENT user (reviewer, approver role) approves by review_id — the reviewer service
+#    mints a bound token AND resumes the execution (SendTaskSuccess):
+curl -s -H "Authorization: $REV_TOKEN" -XPOST "$APPROVALS" -d '{"review_id":"<REVIEW_ID>"}'
+
+# 4) execution resumes -> Finalize (governed write w/ bound token) -> SendToOutbox.
+#    Confirm an approved appeal landed on the controlled outbox queue.
+```
+
+Self-approval (reviewer == requester), a fabricated reviewer, a replayed token, or tampered args
+are all rejected — the same enforcement proven by `tests/` and `platform_core/tests/test_acceptance_enforcement.py`.
+
 ## Network isolation (data residency)
 The runtime Lambdas (`ConnectorFn`, `ReviewerFn`) are VPC-attached to **private subnets with no
 internet route** — the route table has only the local route (no Internet Gateway, no NAT). Every
