@@ -11,8 +11,9 @@ In production the sink is an append-only store (DynamoDB with a deny on
 UpdateItem/DeleteItem, plus PITR) and finalized snapshots land in S3 Object Lock
 (COMPLIANCE mode, WORM) so the trail is tamper-evident by design — the access-
 accounting and audit-control a HIPAA Security Rule (45 CFR 164.312(b)) / HITRUST
-assessor expects. Here it is an in-memory list plus optional JSONL file so the
-model is testable without AWS.
+assessor expects. Without a sink it is an in-memory list plus optional JSONL file
+so the model is testable without AWS; pass a DynamoDBAppendOnlySink to make the
+DEPLOYED trail append-only and WORM-backed.
 """
 from __future__ import annotations
 
@@ -44,13 +45,18 @@ def _chain_hash(record: Dict[str, Any], prev_hash: str) -> str:
 class GatewayAuditLog:
     """Append-only, PHI-masked, hash-chained audit. Each record seals over the
     previous record's hash, so removing or altering any entry breaks the chain
-    (`verify_chain`). Production swaps the list for DynamoDB (deny Update/Delete) +
-    S3 Object Lock — see hpp_agent_platform.audit_sinks."""
+    (`verify_chain`). With a durable `sink` (DynamoDBAppendOnlySink) the sink owns
+    the chain and is the system of record — see hpp_agent_platform.audit_sinks."""
 
-    def __init__(self, jsonl_path: Optional[str] = None) -> None:
+    def __init__(self, jsonl_path: Optional[str] = None, sink: Optional[Any] = None) -> None:
         self.records: List[Dict[str, Any]] = []
         self._path = jsonl_path or os.getenv("GATEWAY_AUDIT_JSONL")
         self._last_hash = "0" * 64
+        # Optional durable, append-only sink. When set, the sink seals/chains the
+        # record and IS the system of record; we keep a local mirror only so
+        # verify_chain()/tests can read it back. This is what makes the DEPLOYED
+        # audit append-only + WORM-backed rather than in-memory.
+        self._sink = sink
 
     def record(self, entry: Dict[str, Any]) -> str:
         audit_id = str(uuid.uuid4())
@@ -63,7 +69,14 @@ class GatewayAuditLog:
             full["args"] = _mask_args(full["args"])
         if "detail" in full and isinstance(full["detail"], str):
             full["detail"] = mask(full["detail"])
-        # hash over the record BODY (pre-prev_hash/hash), chained on the previous hash
+        if self._sink is not None:
+            # Durable sink owns the single hash chain; persist first so a failed
+            # durable write fails the call closed rather than recording a phantom ALLOW.
+            sealed = self._sink.append(full)
+            self._last_hash = sealed.get("hash", self._last_hash)
+            self.records.append(sealed)
+            return audit_id
+        # In-memory chain: hash over the record BODY (pre-prev_hash/hash), chained on prev.
         prev = self._last_hash
         h = _chain_hash(full, prev)
         full["prev_hash"] = prev

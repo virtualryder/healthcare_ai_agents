@@ -74,6 +74,7 @@ def mint_approval(*, reviewer_sub: str, requester_sub: str, agent_id: str, tool:
 def verify_approval(token: str, *, agent_id: str, tool: str, requester_sub: str,
                     args: Optional[Dict[str, Any]] = None,
                     seen_jti: Optional[Set[str]] = None,
+                    jti_store: Optional["JtiStore"] = None,
                     now: Optional[int] = None) -> Dict[str, Any]:
     """Verify a bound approval token for this exact call. Returns the reviewer record."""
     try:
@@ -94,8 +95,60 @@ def verify_approval(token: str, *, agent_id: str, tool: str, requester_sub: str,
     if not p.get("reviewer_sub") or p.get("reviewer_sub") == requester_sub:
         raise ApprovalError("separation of duties violated")
     jti = p.get("jti")
-    if seen_jti is not None:
+    # Single-use enforcement. A durable JtiStore (DynamoDB conditional write) makes
+    # this safe across concurrent processes; the in-process set is dev-only.
+    if jti_store is not None:
+        if not jti_store.claim(jti):
+            raise ApprovalError("approval already used (single-use replay blocked)")
+    elif seen_jti is not None:
         if jti in seen_jti:
             raise ApprovalError("approval already used (single-use replay blocked)")
         seen_jti.add(jti)
     return {"sub": p["reviewer_sub"], "jti": jti}
+
+
+# ── Single-use token stores ──────────────────────────────────────────────────
+class JtiStore:
+    """Durable single-use guard. claim(jti) returns True exactly once per jti and
+    False on every subsequent call — the property that makes an approval single-use
+    even across concurrent Lambda environments (no shared in-process memory)."""
+    def claim(self, jti: str) -> bool:  # pragma: no cover - interface
+        raise NotImplementedError
+
+
+class InMemoryJtiStore(JtiStore):
+    """Dev/test guard. Not safe across processes — production uses DynamoDBJtiStore."""
+    def __init__(self) -> None:
+        self._seen: Set[str] = set()
+
+    def claim(self, jti: str) -> bool:
+        if jti in self._seen:
+            return False
+        self._seen.add(jti)
+        return True
+
+
+class DynamoDBJtiStore(JtiStore):  # pragma: no cover - requires AWS
+    """Production guard: a conditional PutItem on the jti partition key. The
+    ConditionalCheckFailedException IS the replay detection — atomic and durable.
+    The table should also carry a TTL attribute so consumed jtis self-expire."""
+    def __init__(self, table_name: str, region: Optional[str] = None,
+                 ttl_seconds: Optional[int] = None) -> None:
+        import boto3  # type: ignore
+        self._table = boto3.resource(
+            "dynamodb", region_name=region or os.getenv("AWS_REGION", "us-east-1")
+        ).Table(table_name)
+        self._ttl = ttl_seconds or (_TTL * 4)
+
+    def claim(self, jti: str) -> bool:
+        from botocore.exceptions import ClientError  # type: ignore
+        try:
+            self._table.put_item(
+                Item={"jti": jti, "expires_at": int(time.time()) + self._ttl},
+                ConditionExpression="attribute_not_exists(jti)",
+            )
+            return True
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                return False
+            raise

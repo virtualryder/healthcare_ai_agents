@@ -65,10 +65,13 @@ class GatewayResult:
 
 class MCPGateway:
     def __init__(self, audit: Optional[GatewayAuditLog] = None, connector_mode: Optional[str] = None,
-                 jwks: Optional[Dict[str, Any]] = None) -> None:
+                 jwks: Optional[Dict[str, Any]] = None,
+                 jti_store: Optional["_approvals.JtiStore"] = None) -> None:
         self.audit = audit or GatewayAuditLog()
         self._connector_mode = connector_mode  # None -> CONNECTOR_MODE env (default fixture)
-        self._seen_jti: set = set()             # single-use approval replay guard (in-process)
+        # single-use approval replay guard. Default is in-process (dev); production
+        # passes a DynamoDBJtiStore so single-use holds across concurrent Lambdas.
+        self._jti_store = jti_store or _approvals.InMemoryJtiStore()
         self._jwks = jwks                       # JWKS for RS* JWT verification (prod)
 
     def invoke(
@@ -173,6 +176,12 @@ class MCPGateway:
         (`approval["token"]`) tied to this exact agent+tool+args and minted by the
         reviewer service for a reviewer != requester. Demo/fixture path: an explicit
         approve decision with a verified reviewer identity that still satisfies SoD.
+
+        AUTH_REQUIRE_BOUND_APPROVAL=1 (set in every deployed environment) DISABLES the
+        demo path entirely: a bare ``{"approved": true, "reviewer": ...}`` — a reviewer
+        the gateway never authenticated — can no longer authorize a production write.
+        Only a token minted by the reviewer service is accepted. This closes the
+        golden-path approval-bypass finding.
         """
         if not approval:
             return False
@@ -180,10 +189,14 @@ class MCPGateway:
         if token:
             try:
                 _approvals.verify_approval(token, agent_id=agent_id, tool=tool, args=args,
-                                           requester_sub=subject or "", seen_jti=self._seen_jti)
+                                           requester_sub=subject or "", jti_store=self._jti_store)
                 return True
             except _approvals.ApprovalError:
                 return False
+        # No bound token. In a deployed environment (AUTH_REQUIRE_BOUND_APPROVAL=1) the
+        # demo path is closed: a bare {approved, reviewer} can never authorize a write.
+        if os.getenv("AUTH_REQUIRE_BOUND_APPROVAL", "").strip().lower() in ("1", "true", "yes"):
+            return False
         reviewer = approval.get("reviewer") or {}
         rsub = reviewer.get("sub")
         # separation of duties even on the demo path: reviewer must differ from requester

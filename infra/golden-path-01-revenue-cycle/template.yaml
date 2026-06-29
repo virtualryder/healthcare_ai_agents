@@ -2,13 +2,25 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   HPP Golden Path — Agent 01 Revenue-Cycle & Denial. One-command (sam build && sam deploy)
-  governed workflow skeleton: an HTTP API whose tool route runs THROUGH the MCP authorization
-  gateway (policy -> bound approval -> scoped token -> append-only PHI-masked audit), a Cognito
-  JWT authorizer, a customer-managed KMS CMK, an append-only audit + HITL DynamoDB, and the agent
-  function. Fixture mode (no PHI, no live connectors). PHI requires an executed AWS BAA before go-live.
+  governed workflow: an HTTP API whose tool route runs THROUGH the MCP authorization gateway
+  (policy -> bound approval -> scoped token -> append-only PHI-masked audit), a Cognito JWT
+  authorizer, an authenticated reviewer service that mints bound single-use approval tokens,
+  a customer-managed KMS CMK, append-only audit + HITL + single-use (jti) DynamoDB tables, and
+  the agent function. Fixture mode (no PHI, no live connectors). PHI requires an executed AWS
+  BAA before go-live.
 
 Parameters:
   Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
+  BedrockModelArn:
+    Type: String
+    Default: ""
+    Description: >
+      Optional Bedrock foundation-model ARN the agent may invoke (e.g.
+      arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0).
+      Left empty in fixture mode so NO bedrock permission is granted at all.
+
+Conditions:
+  HasBedrockModel: !Not [!Equals [!Ref BedrockModelArn, ""]]
 
 Globals:
   Function:
@@ -21,6 +33,13 @@ Globals:
         CONNECTOR_MODE: fixture
         AUDIT_TABLE: !Ref AuditTable
         HITL_TABLE: !Ref HitlTable
+        JTI_TABLE: !Ref JtiTable
+        # Deployed environments enforce bound, single-use, SoD approval tokens only;
+        # the demo approval shape is rejected. Closes the approval-bypass finding.
+        AUTH_REQUIRE_BOUND_APPROVAL: "1"
+        # Shared HMAC key for mint (reviewer fn) and verify (connector fn), resolved from
+        # Secrets Manager at deploy time. Never hardcoded.
+        APPROVAL_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${ApprovalSecret}:SecretString}}"
 
 Resources:
   AgentKey:
@@ -57,6 +76,25 @@ Resources:
       KeySchema: [{AttributeName: review_id, KeyType: HASH}]
       SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref AgentKey}
 
+  # Single-use approval guard. The conditional PutItem on jti (DynamoDBJtiStore) makes an
+  # approval token consumable exactly once across concurrent Lambdas; the TTL self-expires
+  # consumed jtis. This is the durable replay protection.
+  JtiTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: jti, AttributeType: S}]
+      KeySchema: [{AttributeName: jti, KeyType: HASH}]
+      TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
+      SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref AgentKey}
+
+  ApprovalSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "HMAC signing key for HPP golden-path 01 approval tokens (${Environment})"
+      KmsKeyId: !Ref AgentKey
+      GenerateSecretString: {PasswordLength: 64, ExcludePunctuation: true}
+
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -86,6 +124,9 @@ Resources:
         DefaultAuthorizer: CognitoJwt
 
   # The connector/tool route — the deployed HTTP tool call runs THROUGH the governed gateway.
+  # SAM gives this function its OWN execution role (separate from the reviewer's), scoped to
+  # exactly the tables it touches; Bedrock is granted ONLY when a model ARN is supplied and is
+  # scoped to that ARN — never Resource:"*".
   ConnectorFn:
     Type: AWS::Serverless::Function
     Properties:
@@ -94,8 +135,12 @@ Resources:
       Policies:
         - Statement:
             - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
-            - {Effect: Allow, Action: [bedrock:InvokeModel, bedrock:ApplyGuardrail], Resource: "*"}
+            - !If
+              - HasBedrockModel
+              - {Effect: Allow, Action: [bedrock:InvokeModel], Resource: !Ref BedrockModelArn}
+              - !Ref AWS::NoValue
       Events:
         Tool:
           Type: HttpApi
@@ -111,11 +156,43 @@ Resources:
             Path: /ping
             Auth: {Authorizer: NONE}
 
+  # The authenticated two-person approval authority. A reviewer calls this under their OWN
+  # verified Cognito token; it mints the bound, single-use token the connector requires.
+  # Separate function => separate least-privilege role (audit-write + KMS only; NO connector
+  # table, NO jti table, NO bedrock).
+  ReviewerFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: reviewer.handler
+      CodeUri: src/
+      Policies:
+        - Statement:
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
+      Events:
+        Approve:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GatewayApi
+            Method: POST
+            Path: /approvals
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GatewayApi
+            Method: GET
+            Path: /approvals/ping
+            Auth: {Authorizer: NONE}
+
 Outputs:
   GatewayUrl:
     Description: Base URL of the governed tool API
     Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  ApprovalsUrl:
+    Description: Reviewer-service endpoint (POST a bound approval here as the reviewer)
+    Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/approvals"
   UserPoolId: {Value: !Ref UserPool}
   UserPoolClientId: {Value: !Ref UserPoolClient}
   AuditTableName: {Value: !Ref AuditTable}
   HitlTableName: {Value: !Ref HitlTable}
+  JtiTableName: {Value: !Ref JtiTable}
