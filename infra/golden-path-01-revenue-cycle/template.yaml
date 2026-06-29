@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  HPP Golden Path — Agent 01 Revenue-Cycle & Denial. One-command (sam build && sam deploy)
+  governed workflow skeleton: an HTTP API whose tool route runs THROUGH the MCP authorization
+  gateway (policy -> bound approval -> scoped token -> append-only PHI-masked audit), a Cognito
+  JWT authorizer, a customer-managed KMS CMK, an append-only audit + HITL DynamoDB, and the agent
+  function. Fixture mode (no PHI, no live connectors). PHI requires an executed AWS BAA before go-live.
+
+Parameters:
+  Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Architectures: [arm64]
+    Environment:
+      Variables:
+        CONNECTOR_MODE: fixture
+        AUDIT_TABLE: !Ref AuditTable
+        HITL_TABLE: !Ref HitlTable
+
+Resources:
+  AgentKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub "CMK for HPP golden-path 01 (${Environment})"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"}
+            Action: "kms:*"
+            Resource: "*"
+
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: audit_id, AttributeType: S}
+        - {AttributeName: ts, AttributeType: S}
+      KeySchema:
+        - {AttributeName: audit_id, KeyType: HASH}
+        - {AttributeName: ts, KeyType: RANGE}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref AgentKey}
+
+  HitlTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: review_id, AttributeType: S}]
+      KeySchema: [{AttributeName: review_id, KeyType: HASH}]
+      SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref AgentKey}
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "hpp-gp01-${Environment}"
+      AdminCreateUserConfig: {AllowAdminCreateUserOnly: true}
+      Schema:
+        - {Name: hpp_role, AttributeDataType: String, Mutable: true}
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+
+  GatewayApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Environment
+      Auth:
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              audience: [!Ref UserPoolClient]
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+        DefaultAuthorizer: CognitoJwt
+
+  # The connector/tool route — the deployed HTTP tool call runs THROUGH the governed gateway.
+  ConnectorFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: src/
+      Policies:
+        - Statement:
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
+            - {Effect: Allow, Action: [bedrock:InvokeModel, bedrock:ApplyGuardrail], Resource: "*"}
+      Events:
+        Tool:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GatewayApi
+            Method: POST
+            Path: /tool/{kind}/{method}
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GatewayApi
+            Method: GET
+            Path: /ping
+            Auth: {Authorizer: NONE}
+
+Outputs:
+  GatewayUrl:
+    Description: Base URL of the governed tool API
+    Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  UserPoolId: {Value: !Ref UserPool}
+  UserPoolClientId: {Value: !Ref UserPoolClient}
+  AuditTableName: {Value: !Ref AuditTable}
+  HitlTableName: {Value: !Ref HitlTable}

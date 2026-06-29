@@ -24,3 +24,8 @@ All notable changes to the HPP AI Agent Suite. Pre-1.0 reference accelerator; on
 - All 8 agents to reference depth; `platform_core`; `governance`; CloudFormation (8, cfn-lint clean)
   + Terraform parity; AWS-native Step Functions rebuilds; GTM decks + ROI calculator; offerings;
   runbooks; docs. 121 tests green, no API key.
+
+### Added (continued)
+- One-command **SAM golden path** (`infra/golden-path-01-revenue-cycle/`) with smoke test + teardown.
+- **Reference live connector** — runnable HTTP/FHIR fa\xc3\xa7ade + Agent 01 `demo_live.py` (real HTTP path, no API key) + 2 tests.
+- Agent-handbook **PDFs** in `deliverables/agent-handbooks/`.

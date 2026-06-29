@@ -8,7 +8,7 @@
 A **reference accelerator** of **8 governed healthcare AI agents** — each a standalone reference
 architecture (own VPC, identity, data, and audit stack) — plus an optional **Care & Claims
 Orchestration Platform** that coordinates them across a patient/member journey. A **no-API-key
-automated test suite (142 tests)** exercises the control plane, including negative-case tests for
+automated test suite (144 tests)** exercises the control plane, including negative-case tests for
 cryptographic JWT verification, bound single-use approvals, the tamper-evident audit chain, and
 fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md` /
 `gtm/HPP-DECK-SOURCES.md`.
@@ -25,7 +25,7 @@ fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md
 
 ## ▶ Start here — what to read first
 1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the
-   142-test suite, then deploy into a new AWS account.
+   144-test suite, then deploy into a new AWS account.
 2. **`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`** — honest gap assessment + RACI.
 3. **The security package** — `SECURITY.md`, `docs/THREAT-MODEL.md`,
    `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md`,
@@ -33,7 +33,7 @@ fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md
 4. **`docs/DEPLOY-QUICKSTART.md`** — empty account → running governed agent, two commands.
 
 **I want to…** see it / pitch it → `decks/` (11 decks) + `decks/leave-behinds/` (one-pagers) +
-`gtm/SELLER-SA-FIELD-GUIDE.md` · deploy → `docs/DEPLOY-QUICKSTART.md` + `deliverables/agent-handbooks/`
+`gtm/SELLER-SA-FIELD-GUIDE.md` · deploy → **one command**: `infra/golden-path-01-revenue-cycle/` (SAM) or `docs/DEPLOY-QUICKSTART.md` + `deliverables/agent-handbooks/`
 · review the security model → §3 + §3a + the security package · run the tests → `bash scripts/run_tests.sh`.
 
 ---
@@ -173,7 +173,7 @@ a paved road to compliant production. The honest gap assessment (§5) means no s
 **Honest status: a production-shaped accelerator, not an authorized, production-ready system — and it
 doesn't claim to be.** Verifiable today: consequential actions withheld in code + tested · framework-
 enforced human gate · cryptographic JWT verification · bound single-use SoD approvals · hash-chained
-append-only audit + WORM · PHI masking · complete AWS security architecture · no lock-in · a 142-test
+append-only audit + WORM · PHI masking · complete AWS security architecture · no lock-in · a 144-test
 no-API-key suite incl. control-plane negative cases. Still required before go-live: **AWS BAA**, live
 connectors, IdP integration, Guardrail/red-team tuning, CSV/CSA validation, penetration test, DR game
 day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklist:**
@@ -197,6 +197,7 @@ care_platform/hpp_care_platform/       # govern, canonical, consent, saga, event
 governance/                            # grounding, prompts, evals, red team, fairness, accessibility, controls
 aws-native-reference/                  # Step Functions rebuilds (per agent + care-platform)
 infra/cloudformation/  infra/terraform/  # IaC (8 agents) — cfn-lint clean + Terraform parity
+infra/golden-path-01-revenue-cycle/    # one-command SAM deploy + smoke_test.sh + teardown.sh (GOLDEN-PATHS.md)
 docs/                                  # architecture, security package, deployment models, control mappings, deploy-quickstart
 gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds), offerings, ops runbooks, agent handbooks
 .github/workflows/ci.yml               # CI: tests + security + IaC lint
@@ -205,10 +206,14 @@ gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds
 ## Quick start
 ```bash
 pip install -e platform_core && pip install langgraph streamlit cryptography
-bash scripts/run_tests.sh                                    # 142 tests, no API key
-cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py
-PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py
-# deploy to a new AWS account: docs/DEPLOY-QUICKSTART.md
+bash scripts/run_tests.sh                                    # 144 tests, no API key
+cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py        # fixtures
+EXTRACT_MODE=demo python demo/demo_live.py                                            # LIVE HTTP connector path (no API key)
+cd .. && PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py  # orchestration journeys
+
+# Deploy to a new AWS account — one command (flagship golden path):
+cd infra/golden-path-01-revenue-cycle && ./build.sh && sam deploy --guided && ./smoke_test.sh
+# or the full per-agent isolated stacks: docs/DEPLOY-QUICKSTART.md
 ```
 
 ## Compliance disclaimer

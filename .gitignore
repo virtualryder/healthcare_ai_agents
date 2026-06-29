@@ -13,4 +13,3 @@ gateway-audit.jsonl
 node_modules/
 .coverage
 htmlcov/
-.claude/settings.local.json
