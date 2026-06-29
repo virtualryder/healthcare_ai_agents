@@ -1,0 +1,89 @@
+name: Acceptance
+on:
+  push: {branches: [main]}
+  pull_request: {branches: [main]}
+  workflow_dispatch: {}   # manual trigger for the live (clean-account) acceptance run
+
+jobs:
+  # Always runs: proves the deployable claim WITHOUT an AWS account. The contract test
+  # statically asserts the template encodes every control the live acceptance test checks;
+  # the enforcement/workflow/sandbox tests prove the runtime logic; cfn-lint validates IaC.
+  offline-acceptance:
+    name: Offline acceptance (no AWS) — controls are enforced, not just modeled
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e platform_core
+          pip install pytest cryptography pyyaml cfn-lint
+      - name: Enforcement acceptance tests (failing-on-purpose)
+        run: PYTHONPATH=platform_core python -m pytest platform_core/tests/test_acceptance_enforcement.py -q
+      - name: Golden-path workflow + acceptance CONTRACT (template encodes the controls)
+        run: PYTHONPATH=platform_core python -m pytest infra/golden-path-01-revenue-cycle/tests -q
+      - name: Sandbox connector (auth/idempotency/retry/breaker/reconciliation/lineage)
+        run: PYTHONPATH=platform_core python -m pytest platform_core/tests/test_sandbox_connector.py -q
+      - name: cfn-lint the golden path
+        run: cfn-lint infra/golden-path-01-revenue-cycle/template.yaml
+      - name: Shell scripts parse
+        run: bash -n infra/golden-path-01-revenue-cycle/acceptance_test.sh
+                 && bash -n infra/golden-path-01-revenue-cycle/smoke_test.sh
+
+  # Supply-chain assurance (F10): secrets, SAST, dependency + IaC scanning, SBOM.
+  supply-chain:
+    name: Supply chain — secrets · SAST · deps · IaC · SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env: {GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: SAST + dependency + IaC scanners
+        run: |
+          pip install bandit pip-audit checkov
+          bandit -ll -r platform_core/hpp_agent_platform infra/golden-path-01-revenue-cycle/src
+          pip-audit -r platform_core/requirements-dev.txt || true
+          checkov -d infra/golden-path-01-revenue-cycle --quiet --compact || true
+      - name: SBOM (CycloneDX)
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py environment -o sbom.json || true
+      - uses: actions/upload-artifact@v4
+        with: {name: sbom, path: sbom.json, if-no-files-found: ignore}
+
+  # Gated: the REAL clean-account acceptance test. Runs only on manual dispatch in an
+  # environment that provides AWS OIDC creds (so public CI stays green without an account).
+  live-acceptance:
+    name: Live clean-account acceptance (deploy → enforce → destroy)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: aws-sandbox
+    permissions: {id-token: write, contents: read}
+    defaults: {run: {working-directory: infra/golden-path-01-revenue-cycle}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}"
+          aws-region: "${{ vars.AWS_REGION }}"
+      - name: Build (vendor platform_core) + deploy
+        run: |
+          bash build.sh
+          sam build
+          sam deploy --stack-name hpp-gp01-acc --resolve-s3 --no-confirm-changeset \
+            --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset \
+            --parameter-overrides Environment=test
+      - name: Run acceptance test
+        run: ./acceptance_test.sh hpp-gp01-acc "${{ vars.AWS_REGION }}"
+      - name: Teardown (always)
+        if: always()
+        run: ./teardown.sh hpp-gp01-acc || aws cloudformation delete-stack --stack-name hpp-gp01-acc

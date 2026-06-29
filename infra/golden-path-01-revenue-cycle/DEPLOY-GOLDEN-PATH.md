@@ -100,6 +100,26 @@ A `blocked:false` / `REACHABLE` result means the isolation is NOT in place and t
 ./teardown.sh hpp-gp01-dev
 ```
 
+## Acceptance test (release gate)
+The deployable claim is gated by an automated, clean-account acceptance test:
+
+```bash
+./acceptance_test.sh hpp-gp01-dev us-east-1
+```
+
+It federates two Cognito identities (a requester + a separate reviewer) and proves, end to end,
+that the DEPLOYED system enforces the controls: network egress is **BLOCKED**, a read is ALLOWed,
+a write without approval **PENDS**, a fabricated reviewer is **BLOCKED**, self-approval is
+**BLOCKED**, a two-person bound approval ALLOWs the write **once**, a replay and tampered args are
+**BLOCKED**, a withheld tool is **DENIED**, the async Step Functions workflow reaches the human
+gate and finalizes after approval, and the append-only audit holds the trail. Any failure exits
+non-zero.
+
+CI (`.github/workflows/acceptance.yml`) runs an **offline** acceptance job on every push — a
+contract test statically asserts the template encodes each of these controls (so a regression
+fails before anyone deploys) — plus a **gated live** job (`workflow_dispatch`, AWS-OIDC
+environment) that runs `sam deploy` → `acceptance_test.sh` → teardown.
+
 ## Going live (engagement)
 Set `AUTH_REQUIRE_JWT=1` + JWKS (already verified at the edge here); swap `CONNECTOR_MODE=sandbox` (the resilient adapter: OAuth2/bearer auth, idempotency keys on
 writes, retry/backoff, timeouts, circuit breaker, write reconciliation, lineage) and point

@@ -13,3 +13,12 @@ gateway-audit.jsonl
 node_modules/
 .coverage
 htmlcov/
+.claude/settings.local.json
+
+# Deployment artifacts and credentials
+*.acc*
+key.json
+dk.json
+delkey.json
+wf-input.json
+packaged.yaml

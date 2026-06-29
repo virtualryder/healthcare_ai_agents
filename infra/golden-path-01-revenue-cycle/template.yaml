@@ -14,6 +14,26 @@ Description: >
 Parameters:
   Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
   VpcCidr: {Type: String, Default: "10.40.0.0/16"}
+  DynamoDbPrefixListId:
+    Type: String
+    Default: ""
+    Description: >
+      Managed prefix list id for the DynamoDB gateway endpoint, used as the runtime SG egress
+      destination (no 0.0.0.0/0). Find it with:
+      aws ec2 describe-managed-prefix-lists --filters Name=prefix-list-name,Values=com.amazonaws.<region>.dynamodb
+  S3PrefixListId:
+    Type: String
+    Default: ""
+    Description: "Managed prefix list id for the S3 gateway endpoint (same lookup, ...Values=com.amazonaws.<region>.s3)."
+  WormRetentionDays:
+    Type: Number
+    Default: 2555
+    Description: "WORM (S3 Object Lock COMPLIANCE) retention in days; default ~7 years."
+  WormMode:
+    Type: String
+    Default: COMPLIANCE
+    AllowedValues: [COMPLIANCE, GOVERNANCE]
+    Description: "S3 Object Lock mode. COMPLIANCE (prod, immutable even to root) | GOVERNANCE (non-prod, deletable with bypass)."
   BedrockModelArn:
     Type: String
     Default: ""
@@ -24,6 +44,8 @@ Parameters:
 
 Conditions:
   HasBedrockModel: !Not [!Equals [!Ref BedrockModelArn, ""]]
+  HasDdbPl: !Not [!Equals [!Ref DynamoDbPrefixListId, ""]]
+  HasS3Pl: !Not [!Equals [!Ref S3PrefixListId, ""]]
 
 Globals:
   Function:
@@ -47,6 +69,7 @@ Globals:
         # Shared HMAC key for mint (reviewer fn) and verify (connector fn), resolved from
         # Secrets Manager at deploy time. Never hardcoded.
         APPROVAL_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${ApprovalSecret}:SecretString}}"
+        AUDIT_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${ApprovalSecret}:SecretString}}"
 
 Resources:
   # ── Network: private, no internet route ─────────────────────────────────────
@@ -118,9 +141,29 @@ Resources:
         Statement:
           - Effect: Allow
             Principal: "*"
-            Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query]
+            Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query]
             Resource: "*"
             Condition: {StringEquals: {"aws:PrincipalAccount": !Ref "AWS::AccountId"}}
+
+  # S3 gateway endpoint — the WORM exporter writes audit objects privately (no internet).
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds: [!Ref PrivateRt]
+
+  # Runtime SG egress to the gateway-endpoint prefix lists (DynamoDB/S3). Uses prefix-list ids,
+  # never 0.0.0.0/0 — the route table already has no internet path.
+  DdbEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasDdbPl
+    Properties: {GroupId: !Ref LambdaSg, IpProtocol: tcp, FromPort: 443, ToPort: 443, DestinationPrefixListId: !Ref DynamoDbPrefixListId, Description: "HTTPS to the DynamoDB gateway endpoint"}
+  S3Egress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasS3Pl
+    Properties: {GroupId: !Ref LambdaSg, IpProtocol: tcp, FromPort: 443, ToPort: 443, DestinationPrefixListId: !Ref S3PrefixListId, Description: "HTTPS to the S3 gateway endpoint"}
 
   KmsEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -147,6 +190,18 @@ Resources:
     Properties:
       VpcId: !Ref Vpc
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.sts"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  # Step Functions endpoint — the reviewer service resumes the paused execution
+  # (SendTaskSuccess) from inside the private subnets; no internet path exists.
+  StatesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.states"
       VpcEndpointType: Interface
       PrivateDnsEnabled: true
       SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
@@ -198,6 +253,7 @@ Resources:
         - {AttributeName: ts, KeyType: RANGE}
       PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
       SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref AgentKey}
+      StreamSpecification: {StreamViewType: NEW_IMAGE}
 
   HitlTable:
     Type: AWS::DynamoDB::Table
@@ -239,7 +295,7 @@ Resources:
     Properties:
       UserPoolId: !Ref UserPool
       GenerateSecret: false
-      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH, ALLOW_ADMIN_USER_PASSWORD_AUTH]
 
   GatewayApi:
     Type: AWS::Serverless::HttpApi
@@ -266,7 +322,7 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
-            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
             - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
             - !If
@@ -307,7 +363,7 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
-            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
             # Resume the paused Step Functions execution after minting the bound token.
             # SendTaskSuccess is not resource-scopable, so it must be "*".
@@ -345,7 +401,7 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
-            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
             - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
             - !If
@@ -364,6 +420,9 @@ Resources:
       Policies:
         - LambdaInvokePolicy: {FunctionName: !Ref WorkflowFn}
         - SQSSendMessagePolicy: {QueueName: !GetAtt AppealOutbox.QueueName}
+        # The outbox queue is encrypted with the CMK; sending a message needs KMS data-key.
+        - Statement:
+            - {Effect: Allow, Action: [kms:GenerateDataKey, kms:Decrypt], Resource: !GetAtt AgentKey.Arn}
       DefinitionSubstitutions:
         WorkflowFnArn: !GetAtt WorkflowFn.Arn
         OutboxUrl: !Ref AppealOutbox
@@ -456,6 +515,46 @@ Resources:
             Error: WorkflowError
             Cause: "A governed task failed; see execution history + the append-only audit"
 
+  # ── WORM audit archive (automatic) ───────────────────────────────────────────
+  # Finalized audit records stream here as immutable Object-Lock (COMPLIANCE) objects — the
+  # durable, independently verifiable evidence trail, separate from the live table.
+  WormBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      ObjectLockEnabled: true
+      VersioningConfiguration: {Status: Enabled}
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule: {DefaultRetention: {Mode: !Ref WormMode, Days: !Ref WormRetentionDays}}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: aws:kms, KMSMasterKeyID: !Ref AgentKey}
+      PublicAccessBlockConfiguration: {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+
+  # Triggered by the AuditTable stream — export is automatic and part of the durable write path.
+  AuditExporterFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: exporter.handler
+      CodeUri: src/
+      Environment:
+        Variables:
+          WORM_BUCKET: !Ref WormBucket
+          WORM_RETENTION_DAYS: !Ref WormRetentionDays
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - Statement:
+            - {Effect: Allow, Action: [s3:PutObject, s3:PutObjectRetention], Resource: !Sub "${WormBucket.Arn}/*"}
+            - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
+      Events:
+        AuditStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt AuditTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 10
+            MaximumRetryAttempts: 3
+
 Outputs:
   GatewayUrl:
     Description: Base URL of the governed tool API
@@ -474,3 +573,4 @@ Outputs:
   JtiTableName: {Value: !Ref JtiTable}
   StateMachineArn: {Value: !Ref DenialWorkflow}
   AppealOutboxUrl: {Value: !Ref AppealOutbox}
+  WormBucketName: {Value: !Ref WormBucket}

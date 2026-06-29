@@ -49,6 +49,19 @@ def _audit():
     return GatewayAuditLog()
 
 
+def _denumber(o):
+    """Coerce DynamoDB Decimals back to native int/float so the approval's args-binding hash
+    matches the workflow's JSON-native args (else the bound token is rejected at finalize)."""
+    from decimal import Decimal
+    if isinstance(o, Decimal):
+        return int(o) if o == o.to_integral_value() else float(o)
+    if isinstance(o, dict):
+        return {k: _denumber(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_denumber(v) for v in o]
+    return o
+
+
 def _load_pending(review_id):  # pragma: no cover - requires AWS
     """Read the exact pending write + Step Functions TaskToken the workflow paused on."""
     table = os.getenv("HITL_TABLE")
@@ -78,7 +91,7 @@ def handler(event, context):
     pending = _load_pending(review_id)
 
     if pending:  # async workflow path — approve exactly what the workflow paused on
-        tool, args = pending["tool"], pending.get("args") or {}
+        tool, args = pending["tool"], _denumber(pending.get("args") or {})
         requester_sub = pending.get("requester_sub")
         task_token = pending.get("task_token")
     else:        # synchronous path — caller presents the write to approve
