@@ -41,3 +41,37 @@ def test_gateway_drives_live_connector():
     finally:
         s.shutdown()
         os.environ.pop("PAS_BASE_URL", None)
+
+
+def test_sandbox_connector_round_trips_with_lineage():
+    """CONNECTOR_MODE=sandbox uses the resilient adapter over a REAL socket against the façade,
+    capturing lineage (system/endpoint/status/attempts/latency/request_id)."""
+    from hpp_agent_platform.connectors.sandbox import SandboxHttpConnector
+    s, base = _facade()
+    try:
+        os.environ["PAS_BASE_URL"] = base
+        conn = get_connector("pas", mode="sandbox")
+        assert isinstance(conn, SandboxHttpConnector)
+        out = conn.get_claim(claim_ref="CLM-2026-55810")    # real HTTP via resilient path
+        assert out["status"] == "Denied" and out["denial_codes"] == ["CO-197"]
+        assert conn.last_lineage["http_status"] == 200
+        assert conn.last_lineage["attempts"] == 1
+        assert conn.last_lineage["request_id"]
+        assert conn.last_lineage["endpoint"].endswith("/get_claim")
+    finally:
+        s.shutdown()
+        os.environ.pop("PAS_BASE_URL", None)
+
+
+def test_gateway_drives_sandbox_connector():
+    s, base = _facade()
+    try:
+        os.environ["PAS_BASE_URL"] = base
+        gw = MCPGateway(connector_mode="sandbox")
+        r = gw.invoke(user_claims={"sub": "rcm-1", "custom:hpp_role": "DENIALS_SPECIALIST"},
+                      agent_id="01-revenue-cycle-denial", tool="pas.get_claim",
+                      args={"claim_ref": "CLM-2026-55810"})
+        assert r.decision == "ALLOW" and r.result["status"] == "Denied"
+    finally:
+        s.shutdown()
+        os.environ.pop("PAS_BASE_URL", None)

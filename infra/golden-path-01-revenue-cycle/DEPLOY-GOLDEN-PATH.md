@@ -101,7 +101,9 @@ A `blocked:false` / `REACHABLE` result means the isolation is NOT in place and t
 ```
 
 ## Going live (engagement)
-Set `AUTH_REQUIRE_JWT=1` + JWKS (already verified at the edge here); swap `CONNECTOR_MODE=live`
-and point the connectors at the real EHR/clearinghouse/payer (see `../../platform_core/.../connectors/live.py`
+Set `AUTH_REQUIRE_JWT=1` + JWKS (already verified at the edge here); swap `CONNECTOR_MODE=sandbox` (the resilient adapter: OAuth2/bearer auth, idempotency keys on
+writes, retry/backoff, timeouts, circuit breaker, write reconciliation, lineage) and point
+`<KIND>_BASE_URL` (+ `<KIND>_API_KEY` or `<KIND>_TOKEN_URL`/`_CLIENT_ID`/`_CLIENT_SECRET`) at the
+real EHR/clearinghouse/payer sandbox (`CONNECTOR_MODE=live` is the bare reference adapter) (see `../../platform_core/.../connectors/live.py`
 and the reference live façade in `../../01-revenue-cycle-denial-agent/demo/demo_live.py`); attach a
 Bedrock Guardrail; complete the go-live checklist in `../../docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`.
