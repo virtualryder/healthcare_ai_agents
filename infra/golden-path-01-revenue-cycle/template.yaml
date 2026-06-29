@@ -2,22 +2,25 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   HPP Golden Path — Agent 01 Revenue-Cycle & Denial. One-command (sam build && sam deploy)
-  governed workflow: an HTTP API whose tool route runs THROUGH the MCP authorization gateway
-  (policy -> bound approval -> scoped token -> append-only PHI-masked audit), a Cognito JWT
-  authorizer, an authenticated reviewer service that mints bound single-use approval tokens,
-  a customer-managed KMS CMK, append-only audit + HITL + single-use (jti) DynamoDB tables, and
-  the agent function. Fixture mode (no PHI, no live connectors). PHI requires an executed AWS
-  BAA before go-live.
+  GOVERNED + NETWORK-ISOLATED workflow: an HTTP API whose tool route runs THROUGH the MCP
+  authorization gateway (policy -> bound approval -> scoped token -> append-only PHI-masked
+  audit). The runtime Lambdas run in PRIVATE subnets with NO internet route (no IGW, no NAT);
+  every AWS dependency is reached over a VPC endpoint (Bedrock/KMS/Logs/STS interface
+  endpoints + a DynamoDB gateway endpoint), so PHI cannot egress to the public internet and
+  Bedrock inference stays in-account over PrivateLink. Includes a Cognito JWT authorizer and
+  an authenticated reviewer service that mints bound, single-use approval tokens. Fixture mode
+  (no PHI, no live connectors). PHI requires an executed AWS BAA before go-live.
 
 Parameters:
   Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
+  VpcCidr: {Type: String, Default: "10.40.0.0/16"}
   BedrockModelArn:
     Type: String
     Default: ""
     Description: >
       Optional Bedrock foundation-model ARN the agent may invoke (e.g.
       arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0).
-      Left empty in fixture mode so NO bedrock permission is granted at all.
+      Empty in fixture mode -> no bedrock permission and no bedrock-runtime endpoint.
 
 Conditions:
   HasBedrockModel: !Not [!Equals [!Ref BedrockModelArn, ""]]
@@ -28,6 +31,10 @@ Globals:
     Timeout: 30
     MemorySize: 256
     Architectures: [arm64]
+    # Every runtime function is VPC-attached to the private subnets with the egress-locked SG.
+    VpcConfig:
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref LambdaSg]
     Environment:
       Variables:
         CONNECTOR_MODE: fixture
@@ -42,6 +49,130 @@ Globals:
         APPROVAL_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${ApprovalSecret}:SecretString}}"
 
 Resources:
+  # ── Network: private, no internet route ─────────────────────────────────────
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{Key: Name, Value: !Sub "hpp-gp01-${Environment}"}]
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 4, 8]]
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, 4, 8]]
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+
+  # Route table with ONLY the local route (no IGW, no NAT) -> no path to the internet.
+  PrivateRt:
+    Type: AWS::EC2::RouteTable
+    Properties: {VpcId: !Ref Vpc}
+  AssocA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PrivateSubnetA, RouteTableId: !Ref PrivateRt}
+  AssocB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: {SubnetId: !Ref PrivateSubnetB, RouteTableId: !Ref PrivateRt}
+
+  # Egress-locked SG for the functions: 443 only, to the endpoint SG / in-VPC services.
+  LambdaSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HPP gp01 runtime - egress 443 to VPC endpoints only
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: !Ref VpcCidr,
+           Description: "HTTPS to in-VPC interface endpoints + DynamoDB gateway endpoint"}
+
+  # Interface-endpoint SG: accept 443 only from the runtime SG.
+  EndpointSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HPP gp01 VPC interface endpoints - 443 from runtime SG
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, SourceSecurityGroupId: !Ref LambdaSg,
+           Description: "HTTPS from runtime Lambdas"}
+
+  # DynamoDB via GATEWAY endpoint (route-table assoc) — audit/HITL/jti never leave AWS.
+  DynamoDbEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.dynamodb"
+      VpcEndpointType: Gateway
+      RouteTableIds: [!Ref PrivateRt]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query]
+            Resource: "*"
+            Condition: {StringEquals: {"aws:PrincipalAccount": !Ref "AWS::AccountId"}}
+
+  KmsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.kms"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  LogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  StsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.sts"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref EndpointSg]
+
+  # In-account Bedrock over PrivateLink — only created when a model is configured.
+  BedrockEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: HasBedrockModel
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.bedrock-runtime"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref EndpointSg]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: [bedrock:InvokeModel]
+            Resource: !Ref BedrockModelArn
+            Condition: {StringEquals: {"aws:PrincipalAccount": !Ref "AWS::AccountId"}}
+
+  # ── Data plane ──────────────────────────────────────────────────────────────
   AgentKey:
     Type: AWS::KMS::Key
     Properties:
@@ -76,9 +207,8 @@ Resources:
       KeySchema: [{AttributeName: review_id, KeyType: HASH}]
       SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref AgentKey}
 
-  # Single-use approval guard. The conditional PutItem on jti (DynamoDBJtiStore) makes an
-  # approval token consumable exactly once across concurrent Lambdas; the TTL self-expires
-  # consumed jtis. This is the durable replay protection.
+  # Single-use approval guard. Conditional PutItem on jti makes a token consumable once
+  # across concurrent Lambdas; TTL self-expires consumed jtis. Durable replay protection.
   JtiTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -95,6 +225,7 @@ Resources:
       KmsKeyId: !Ref AgentKey
       GenerateSecretString: {PasswordLength: 64, ExcludePunctuation: true}
 
+  # ── Identity ────────────────────────────────────────────────────────────────
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -123,9 +254,9 @@ Resources:
               issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
         DefaultAuthorizer: CognitoJwt
 
-  # The connector/tool route — the deployed HTTP tool call runs THROUGH the governed gateway.
-  # SAM gives this function its OWN execution role (separate from the reviewer's), scoped to
-  # exactly the tables it touches; Bedrock is granted ONLY when a model ARN is supplied and is
+  # ── Functions ───────────────────────────────────────────────────────────────
+  # Connector/tool route — runs THROUGH the governed gateway. Its OWN least-privilege role
+  # (VPC-access + exactly the tables it touches). Bedrock granted ONLY with a model ARN,
   # scoped to that ARN — never Resource:"*".
   ConnectorFn:
     Type: AWS::Serverless::Function
@@ -133,6 +264,7 @@ Resources:
       Handler: index.handler
       CodeUri: src/
       Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
             - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
             - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
@@ -147,25 +279,33 @@ Resources:
           Properties:
             ApiId: !Ref GatewayApi
             Method: POST
-            Path: /tool/{kind}/{method}
+            Path: "/tool/{kind}/{method}"
         Health:
           Type: HttpApi
           Properties:
             ApiId: !Ref GatewayApi
             Method: GET
-            Path: /ping
+            Path: "/ping"
+            Auth: {Authorizer: NONE}
+        EgressCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GatewayApi
+            Method: GET
+            Path: "/egress-check"
             Auth: {Authorizer: NONE}
 
-  # The authenticated two-person approval authority. A reviewer calls this under their OWN
+  # Authenticated two-person approval authority. A reviewer calls this under their OWN
   # verified Cognito token; it mints the bound, single-use token the connector requires.
-  # Separate function => separate least-privilege role (audit-write + KMS only; NO connector
-  # table, NO jti table, NO bedrock).
+  # Separate function => separate least-privilege role (VPC-access + audit-write + KMS only;
+  # NO connector table, NO jti table, NO bedrock).
   ReviewerFn:
     Type: AWS::Serverless::Function
     Properties:
       Handler: reviewer.handler
       CodeUri: src/
       Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
             - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
@@ -175,13 +315,13 @@ Resources:
           Properties:
             ApiId: !Ref GatewayApi
             Method: POST
-            Path: /approvals
+            Path: "/approvals"
         Health:
           Type: HttpApi
           Properties:
             ApiId: !Ref GatewayApi
             Method: GET
-            Path: /approvals/ping
+            Path: "/approvals/ping"
             Auth: {Authorizer: NONE}
 
 Outputs:
@@ -191,6 +331,10 @@ Outputs:
   ApprovalsUrl:
     Description: Reviewer-service endpoint (POST a bound approval here as the reviewer)
     Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/approvals"
+  EgressCheckUrl:
+    Description: Diagnostic that must report BLOCKED (no public egress) on a correct deploy
+    Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/egress-check"
+  VpcId: {Value: !Ref Vpc}
   UserPoolId: {Value: !Ref UserPool}
   UserPoolClientId: {Value: !Ref UserPoolClient}
   AuditTableName: {Value: !Ref AuditTable}

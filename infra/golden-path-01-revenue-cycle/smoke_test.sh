@@ -12,6 +12,10 @@ echo "Gateway:   $URL"
 echo "Approvals: $APPROVALS"
 echo "1) /ping (unauthenticated health):"
 curl -s "$URL/ping"; echo
+echo
+echo "1b) Network isolation — must report BLOCKED (no public-internet egress):"
+EG=$(out EgressCheckUrl); curl -s "$EG"; echo
+echo "   ^ blocked:true => the runtime has no route to the internet (PHI cannot egress)."
 cat <<NOTE
 
 Obtain TWO Cognito id tokens:
@@ -52,4 +56,5 @@ Obtain TWO Cognito id tokens:
 Expected: 2 ALLOW(read), 3 PENDING, 4 PENDING(bypass blocked), 5 ALLOW(approved),
           6 PENDING(replay blocked), 7 DENY. Every attempt is written to the
           append-only audit table: $AUDIT
+Network: GET /egress-check must return blocked:true (private subnets, no IGW/NAT).
 NOTE
