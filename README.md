@@ -50,6 +50,43 @@ Nothing in this repository is production-certified; see `docs/PRODUCTION-READINE
 
 ---
 
+### Hero pilot — Revenue-Cycle Denial Drafting (Agent 01)
+
+**Denial appeal drafting is the lead, low-blast-radius pilot.** The agent *reads* a claim/denial,
+*classifies* the root cause, and *drafts* a grounded appeal — it **never submits a claim or an
+appeal**; a biller/denials specialist does, through the human gate. That keeps the blast radius small
+while the payback (denials are a **~$18B/yr** rework cost) is large.
+
+It now ships with a **scored quality benchmark**, not just structural checks. The scored eval
+([`governance/evals/score_denial.py`](governance/evals/score_denial.py)) runs the **real Agent 01
+classifier** (`agent/nodes.analyze_denial`) over **20 labeled synthetic denial cases** and gates on
+regulatory-weighted thresholds — **CI fails the build on any miss**:
+
+| Metric | Threshold | Why |
+|---|---|---|
+| Denial-reason classification accuracy (CARC/RARC-family) | ≥ 0.90 | correct root cause |
+| **Recoverable-vs-write-off recall** | **≥ 0.95** (weighted highest) | **missing a recoverable denial is a wrongful write-off — the money harm** |
+| Entity F1 (claim_id · payer · denial_code · service) | ≥ 0.85 | extraction fidelity |
+| Appeal-draft grounding rate | ≥ 0.90 | no fabricated codes/amounts (reuses `governance/grounding.py`) |
+| **PHI-leak rate** | **== 0 (HARD GATE)** | platform masker strips every identifier before emit/audit |
+| Appeal completeness | ≥ 0.95 | required fields present (presence, not truthiness) |
+| Duplicate accuracy | ≥ 0.90 | duplicate-vs-near-miss discrimination |
+
+Report: [`governance/evals/eval-report-denial.md`](governance/evals/eval-report-denial.md) ·
+run it: `make eval-denial` · CI: the `evals` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+**Honest framing on data.** Unlike an open public dataset, there is **no clean public, PHI-free
+denial API** — real denial data is the customer's **X12 835/277** remittance (via a clearinghouse) or
+**AWS HealthLake Claim/ClaimResponse (FHIR)**, both **PHI-bearing and under a BAA**. The benchmark
+therefore runs on **labeled synthetic denials**, and the connector scaffold
+([`platform_core/hpp_agent_platform/connectors/denials.py`](platform_core/hpp_agent_platform/connectors/denials.py))
+follows the same governed interface: **fixture mode** returns the synthetic cases offline; **live mode
+raises a clear `NotImplementedError` pointing to the X12/HealthLake source** (engagement work — not
+stubbed against a fake endpoint); and **writes (claim resubmission, appeal submission) always raise —
+submission is human-gated.**
+
+---
+
 ### Canonical deployment path
 
 **The one supported, acceptance-gated deploy path is the Agent 01 golden path — [`infra/golden-path-01-revenue-cycle/`](infra/golden-path-01-revenue-cycle/)** (SAM: `./build.sh && sam deploy --guided && ./smoke_test.sh`) — the only path that has been through the clean-account acceptance gate. The nested CloudFormation suite in [`infra/cloudformation/`](infra/cloudformation/) is an **alternative multi-agent reference (not acceptance-gated)**, and [`infra/terraform/`](infra/terraform/) is a near-parity reference (coverage matrix: [`docs/TERRAFORM-AND-GOVCLOUD-STATUS.md`](docs/TERRAFORM-AND-GOVCLOUD-STATUS.md)). Validation evidence: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).

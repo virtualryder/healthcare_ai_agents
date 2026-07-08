@@ -1,5 +1,5 @@
 # HPP AI Agent Suite — common tasks. `make help` lists targets.
-.PHONY: help install test demo evals lint-cfn decks roi clean
+.PHONY: help install test demo evals eval-denial lint-cfn decks roi clean
 AGENT ?= 01-revenue-cycle-denial
 
 help:
@@ -16,6 +16,9 @@ demo: ## Run a deterministic agent demo (AGENT=0N-name), no API key
 
 evals: ## Run the governance structural eval harness
 	PYTHONPATH=platform_core:. python -m governance.evals.run_evals
+
+eval-denial: ## Run the scored denial benchmark (Agent 01) — gates on thresholds
+	PYTHONPATH=platform_core:. python -m governance.evals.score_denial
 
 lint-cfn: ## cfn-lint all CloudFormation templates
 	cfn-lint infra/cloudformation/*.yaml

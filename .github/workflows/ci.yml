@@ -21,6 +21,36 @@ jobs:
       - name: Governance eval harness
         run: PYTHONPATH=platform_core:. python -m governance.evals.run_evals
 
+  evals:
+    name: Scored eval — Agent 01 Revenue-Cycle Denial (threshold gate)
+    # Scored output-quality gate for the hero pilot. Runs the labeled synthetic
+    # denial benchmark against regulatory-weighted thresholds (denial-reason
+    # accuracy, recoverable-recall weighted highest, entity F1, appeal grounding,
+    # PHI-leak = 0 hard gate, appeal completeness, duplicate accuracy).
+    # Deterministic, no API key. Fails the build on regression; publishes
+    # eval-report-denial.md as an artifact for the assurance packet.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e platform_core
+          pip install pytest pygments "langgraph>=0.2"
+      - name: Scored eval — Agent 01 (gate on thresholds)
+        run: PYTHONPATH=platform_core:. python -m governance.evals.score_denial
+      - name: Scored eval tests (gate + negative controls)
+        run: PYTHONPATH=platform_core:. python -m pytest governance/evals/test_score_denial.py -q
+      - name: Publish eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent01-denial-eval-report
+          path: governance/evals/eval-report-denial.md
+          if-no-files-found: warn
+
   security:
     name: Security control-plane (negative cases) + prompt-pin
     runs-on: ubuntu-latest

@@ -27,7 +27,7 @@ from .live import LiveConnector, LiveHttpConnector
 
 _KINDS = {"ehr", "pas", "clearinghouse", "payer", "coding", "clinicalcriteria",
           "careplan", "scheduling", "registration", "kb", "identity", "consent",
-          "idp", "contactcenter"}
+          "idp", "contactcenter", "denials"}
 
 
 def _base_url(kind: str) -> str:
@@ -38,6 +38,14 @@ def get_connector(kind: str, mode: Optional[str] = None) -> Connector:
     if kind not in _KINDS:
         raise ValueError(f"unknown connector kind {kind!r}")
     mode = (mode or os.getenv("CONNECTOR_MODE", "fixture")).strip().lower()
+
+    if kind == "denials":
+        # Denials has no clean public source: fixture -> labeled synthetic denials;
+        # live/sandbox -> NotImplementedError pointing to X12 835/277 or HealthLake
+        # ClaimResponse (FHIR) under a BAA (engagement work). Handled by a dedicated
+        # scaffold so the fixture/live defaults for every other kind are unchanged.
+        from .denials import DenialsConnector
+        return DenialsConnector(mode=mode)
 
     if mode == "sandbox":
         base_url = _base_url(kind)

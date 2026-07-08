@@ -1,0 +1,205 @@
+{
+  "passed": true,
+  "metrics": {
+    "denial_reason_accuracy": 1.0,
+    "recoverable_recall": 1.0,
+    "entity_f1": 1.0,
+    "grounding_rate": 1.0,
+    "phi_leak_rate": 0.0,
+    "appeal_completeness": 1.0,
+    "duplicate_accuracy": 1.0
+  },
+  "n_cases": 20,
+  "detail": [
+    {
+      "id": "DN-0001",
+      "reason_gold": "authorization",
+      "reason_pred": "authorization",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0002",
+      "reason_gold": "authorization",
+      "reason_pred": "authorization",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0003",
+      "reason_gold": "medical_necessity",
+      "reason_pred": "medical_necessity",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0004",
+      "reason_gold": "medical_necessity",
+      "reason_pred": "medical_necessity",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0005",
+      "reason_gold": "coding",
+      "reason_pred": "coding",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0006",
+      "reason_gold": "coding",
+      "reason_pred": "coding",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0007",
+      "reason_gold": "coding",
+      "reason_pred": "coding",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0008",
+      "reason_gold": "coding",
+      "reason_pred": "coding",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0009",
+      "reason_gold": "authorization",
+      "reason_pred": "authorization",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0010",
+      "reason_gold": "authorization",
+      "reason_pred": "authorization",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0011",
+      "reason_gold": "eligibility",
+      "reason_pred": "eligibility",
+      "recoverable_gold": false,
+      "recoverable_pred": false,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0012",
+      "reason_gold": "eligibility",
+      "reason_pred": "eligibility",
+      "recoverable_gold": false,
+      "recoverable_pred": false,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0013",
+      "reason_gold": "eligibility",
+      "reason_pred": "eligibility",
+      "recoverable_gold": false,
+      "recoverable_pred": false,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0014",
+      "reason_gold": "timely_filing",
+      "reason_pred": "timely_filing",
+      "recoverable_gold": false,
+      "recoverable_pred": false,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0015",
+      "reason_gold": "timely_filing",
+      "reason_pred": "timely_filing",
+      "recoverable_gold": false,
+      "recoverable_pred": false,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0016",
+      "reason_gold": "other",
+      "reason_pred": "other",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0017",
+      "reason_gold": "medical_necessity",
+      "reason_pred": "medical_necessity",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0018",
+      "reason_gold": "coding",
+      "reason_pred": "coding",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0019",
+      "reason_gold": "authorization",
+      "reason_pred": "authorization",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    },
+    {
+      "id": "DN-0020",
+      "reason_gold": "medical_necessity",
+      "reason_pred": "medical_necessity",
+      "recoverable_gold": true,
+      "recoverable_pred": true,
+      "grounded": true,
+      "phi_leak": false
+    }
+  ],
+  "confusion": {
+    "recoverable": {
+      "tp": 15,
+      "fp": 0,
+      "fn": 0,
+      "tn": 5
+    }
+  },
+  "classifier": "agent.nodes.analyze_denial",
+  "failures": []
+}
