@@ -19,8 +19,10 @@ dependency on any other agent.** A standalone deployment provisions, for that ag
 
 Because nothing is shared, a standalone agent can be deployed, audited, certified, and operated
 independently — and torn down without affecting anything else. This is the default and the
-recommended way to land. Deploy with `scripts/deploy.sh` (see the per-agent handbooks in
-`deliverables/agent-handbooks/`).
+recommended way to land. The **canonical, acceptance-gated deploy is the Agent 01 SAM golden path**
+(`infra/golden-path-01-revenue-cycle/`); the nested-CloudFormation route via `scripts/deploy.sh`
+(see the per-agent handbooks in `deliverables/agent-handbooks/`) is the alternative multi-agent
+reference (not acceptance-gated).
 
 ### Per-agent VPC CIDRs (give each a distinct block)
 | Agent | CIDR |

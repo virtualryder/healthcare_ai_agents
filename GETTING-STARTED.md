@@ -37,8 +37,16 @@ test asserts the agent cannot issue a UM determination).
 
 ## Step 3 — Deploy into a new AWS account
 
-Follow **[`docs/DEPLOY-QUICKSTART.md`](docs/DEPLOY-QUICKSTART.md)** — empty account → running
-governed agent with a working human gate, in two commands:
+**Canonical path (acceptance-gated):** the Agent 01 SAM golden path — one command, with a smoke
+test and teardown (validated in [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md)):
+
+```bash
+cd infra/golden-path-01-revenue-cycle && ./build.sh && sam deploy --guided && ./smoke_test.sh
+```
+
+**Alternative multi-agent reference (not acceptance-gated):** the nested-CloudFormation route in
+**[`docs/DEPLOY-QUICKSTART.md`](docs/DEPLOY-QUICKSTART.md)** — empty account → running governed
+agent in two commands:
 
 ```bash
 scripts/build_lambdas.sh 01-revenue-cycle-denial
@@ -62,7 +70,7 @@ Prefer Terraform? `infra/terraform/` is at parity (`terraform apply -var-file=en
 | The thesis & 8-agent overview | `README.md` |
 | One agent's build (demo, tests, docs) | `0N-<agent>/README.md` |
 | Architecture & request path | `docs/SUITE-ARCHITECTURE.md` |
-| Deploy steps (new AWS account) | `docs/DEPLOY-QUICKSTART.md` |
+| Deploy steps (new AWS account) | `infra/golden-path-01-revenue-cycle/` (canonical) · `docs/DEPLOY-QUICKSTART.md` (alternative reference) |
 | IaC (CloudFormation / Terraform) | `infra/cloudformation/` · `infra/terraform/` |
 | AWS-native Step Functions rebuilds | `aws-native-reference/` |
 | Governance controls | `governance/` |

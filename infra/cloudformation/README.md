@@ -1,4 +1,10 @@
-# CloudFormation Quick Deploy — HPP Agent 01
+# CloudFormation Quick Deploy — alternative multi-agent reference
+
+> **Not the canonical path, and not acceptance-gated.** This nested-CloudFormation suite is the
+> **alternative multi-agent reference** for stamping out per-agent isolated stacks. The canonical,
+> acceptance-gated deploy path for this repo is the Agent 01 SAM golden path —
+> [`../golden-path-01-revenue-cycle/`](../golden-path-01-revenue-cycle/) — validated in
+> [`../../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](../../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
 
 One master template (`quickstart.yaml`) provisions a customer-isolated, HIPAA-defensible
 agent environment. **An AWS Business Associate Agreement must be in place before processing

@@ -48,6 +48,10 @@ Nothing in this repository is production-certified; see `docs/PRODUCTION-READINE
 
 ---
 
+### Canonical deployment path
+
+**The one supported, acceptance-gated deploy path is the Agent 01 golden path — [`infra/golden-path-01-revenue-cycle/`](infra/golden-path-01-revenue-cycle/)** (SAM: `./build.sh && sam deploy --guided && ./smoke_test.sh`) — the only path that has been through the clean-account acceptance gate. The nested CloudFormation suite in [`infra/cloudformation/`](infra/cloudformation/) is an **alternative multi-agent reference (not acceptance-gated)**, and [`infra/terraform/`](infra/terraform/) is a parity reference. Validation evidence: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+
 ## ▶ Start here — what to read first
 1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the
    185-test suite (as of 2026-07-07), then deploy into a new AWS account.
@@ -55,10 +59,10 @@ Nothing in this repository is production-certified; see `docs/PRODUCTION-READINE
 3. **The security package** — `SECURITY.md`, `docs/THREAT-MODEL.md`,
    `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md`,
    `docs/INCIDENT-RESPONSE-AND-KEY-MANAGEMENT.md`.
-4. **`docs/DEPLOY-QUICKSTART.md`** — empty account → running governed agent, two commands.
+4. **`infra/golden-path-01-revenue-cycle/`** — the canonical one-command deploy; `docs/DEPLOY-QUICKSTART.md` covers the alternative nested-CloudFormation reference (not acceptance-gated).
 
 **I want to…** see it / pitch it → `decks/` (11 decks) + `decks/leave-behinds/` (one-pagers) +
-`gtm/SELLER-SA-FIELD-GUIDE.md` · deploy → **one command**: `infra/golden-path-01-revenue-cycle/` (SAM) or `docs/DEPLOY-QUICKSTART.md` + `deliverables/agent-handbooks/`
+`gtm/SELLER-SA-FIELD-GUIDE.md` · deploy → **one command (canonical)**: `infra/golden-path-01-revenue-cycle/` (SAM); alternative multi-agent reference: `docs/DEPLOY-QUICKSTART.md` + `deliverables/agent-handbooks/`
 · review the security model → §3 + §3a + the security package · run the tests → `bash scripts/run_tests.sh`.
 
 ---
@@ -196,8 +200,10 @@ Monthly run-cost model (pilot vs production): [`offerings/TCO-MODEL.md`](offerin
 ---
 
 ## 4. How to position it
-- **Standalone first, platform when ready.** One `scripts/deploy.sh <agent>` stands up a complete
-  isolated stack with **no platform dependency** (`docs/DEPLOYMENT-MODELS.md`). Grow agent by agent;
+- **Standalone first, platform when ready.** Start with the canonical golden path
+  (`infra/golden-path-01-revenue-cycle/`); for multi-agent scale-out, `scripts/deploy.sh <agent>`
+  stands up a complete isolated stack per agent with **no platform dependency**
+  (`docs/DEPLOYMENT-MODELS.md`, alternative reference — not acceptance-gated). Grow agent by agent;
   the orchestration platform is additive.
 - **Sellers & SAs:** `gtm/SELLER-SA-FIELD-GUIDE.md` (phased playbook + CISO security-review checklist),
   `gtm/SELLER-FIRST-MEETING-CHEATSHEET.md`, `gtm/HPP-PLATFORM-GTM-STORY.md`.
@@ -227,14 +233,14 @@ day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklis
 ## Repository map
 ```
 README.md  GETTING-STARTED.md  ENTERPRISE-PLATFORM.md  SECURITY.md  SUITE-STATUS.md  SOURCES.md
-CHANGELOG.md  VERSION  CONTRIBUTING.md  Makefile
+CHANGELOG.md  VERSION  CONTRIBUTING.md  IMPROVEMENTS-OVER-SLG.md  Makefile
 01-..08-*-agent/                       # 8 agents (code, tests, docs, deploy runbook, deck)
 platform_core/hpp_agent_platform/      # gateway, jwt_verify, approvals, audit(+sinks), masker, LLM factory, connectors, A2A
 care_platform/hpp_care_platform/       # govern, canonical, consent, saga, events, journeys (orchestration platform)
 governance/                            # grounding, prompts, evals, red team, fairness, accessibility, controls
 aws-native-reference/                  # Step Functions rebuilds (per agent + care-platform)
-infra/cloudformation/  infra/terraform/  # IaC (8 agents) — cfn-lint clean + Terraform parity
-infra/golden-path-01-revenue-cycle/    # one-command SAM deploy + smoke_test.sh + teardown.sh (GOLDEN-PATHS.md)
+infra/golden-path-01-revenue-cycle/    # CANONICAL: one-command SAM deploy + smoke_test.sh + teardown.sh (GOLDEN-PATHS.md)
+infra/cloudformation/  infra/terraform/  # Alternative multi-agent reference (not acceptance-gated) + Terraform parity
 docs/                                  # architecture, security package, deployment models, control mappings, deploy-quickstart
 gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds), offerings, ops runbooks, agent handbooks
 .github/workflows/ci.yml               # CI: tests + security + IaC lint
@@ -248,9 +254,9 @@ cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py   
 EXTRACT_MODE=demo python demo/demo_live.py                                            # LIVE HTTP connector path (no API key)
 cd .. && PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py  # orchestration journeys
 
-# Deploy to a new AWS account — one command (flagship golden path):
+# Deploy to a new AWS account — one command (canonical golden path):
 cd infra/golden-path-01-revenue-cycle && ./build.sh && sam deploy --guided && ./smoke_test.sh
-# or the full per-agent isolated stacks: docs/DEPLOY-QUICKSTART.md
+# alternative multi-agent reference (nested CloudFormation, not acceptance-gated): docs/DEPLOY-QUICKSTART.md
 ```
 
 ## Compliance disclaimer

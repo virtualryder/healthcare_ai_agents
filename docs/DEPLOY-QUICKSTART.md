@@ -1,5 +1,11 @@
 # Deploy Quickstart — Empty Account to Running Governed Agent
 
+> **Alternative multi-agent reference — not the canonical path.** This nested-CloudFormation route
+> is **not acceptance-gated**. The canonical, acceptance-gated deploy path is the Agent 01 SAM
+> golden path ([`../infra/golden-path-01-revenue-cycle/`](../infra/golden-path-01-revenue-cycle/)),
+> validated in [`../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+> Use this route when you specifically need the nested per-agent stack set.
+
 This is the copy-paste path from an empty AWS account to a running, governed HPP agent with
 a working human gate. It deploys the real CloudFormation stacks via the shipped scripts. The
 suite is Deployable-by-design; this quickstart stands up the platform in **fixture mode** —
