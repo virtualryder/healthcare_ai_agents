@@ -139,3 +139,6 @@ customer is governed run cost versus value, which this worksheet makes explicit.
 
 These are planning figures. Production run cost is confirmed only after live-connector
 validation and observed token usage in the pilot. No figure here is a quote.
+
+---
+**Value side:** see [ROI-CASE-STUDY.md](ROI-CASE-STUDY.md) for a fully worked, illustrative ROI example with totals.

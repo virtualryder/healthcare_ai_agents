@@ -52,7 +52,7 @@ Nothing in this repository is production-certified; see `docs/PRODUCTION-READINE
 
 ### Canonical deployment path
 
-**The one supported, acceptance-gated deploy path is the Agent 01 golden path — [`infra/golden-path-01-revenue-cycle/`](infra/golden-path-01-revenue-cycle/)** (SAM: `./build.sh && sam deploy --guided && ./smoke_test.sh`) — the only path that has been through the clean-account acceptance gate. The nested CloudFormation suite in [`infra/cloudformation/`](infra/cloudformation/) is an **alternative multi-agent reference (not acceptance-gated)**, and [`infra/terraform/`](infra/terraform/) is a parity reference. Validation evidence: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+**The one supported, acceptance-gated deploy path is the Agent 01 golden path — [`infra/golden-path-01-revenue-cycle/`](infra/golden-path-01-revenue-cycle/)** (SAM: `./build.sh && sam deploy --guided && ./smoke_test.sh`) — the only path that has been through the clean-account acceptance gate. The nested CloudFormation suite in [`infra/cloudformation/`](infra/cloudformation/) is an **alternative multi-agent reference (not acceptance-gated)**, and [`infra/terraform/`](infra/terraform/) is a near-parity reference (coverage matrix: [`docs/TERRAFORM-AND-GOVCLOUD-STATUS.md`](docs/TERRAFORM-AND-GOVCLOUD-STATUS.md)). Validation evidence: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
 
 ## ▶ Start here — what to read first
 1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the

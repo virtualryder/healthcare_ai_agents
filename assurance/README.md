@@ -85,3 +85,5 @@ repository artifacts.
 *Reference accelerator — not an AWS service, not AWS-supported software, not a compliance
 certification, and not production-ready for regulated data without customer-specific
 engineering, testing, authorization, and operational ownership.*
+
+- **State privacy-law annex (US):** [`../docs/STATE-PRIVACY-LAW-ANNEX.md`](../docs/STATE-PRIVACY-LAW-ANNEX.md) — WA MHMDA, CA CMIA/CCPA-CPRA, comprehensive-state and AI-in-UM laws mapped to platform controls.
