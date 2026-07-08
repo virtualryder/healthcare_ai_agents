@@ -13,7 +13,7 @@
   framework-enforced HITL interrupt, framework-free runner, gateway-backed tools, fixtures,
   Streamlit dashboard, AgentCore `/invocations`+`/ping` serve contract, Dockerfile, demo +
   live-path runbook, four-document doc set, full test suite.
-- **infra/cloudformation (Agent 01)** — built & validated: quickstart master nesting network (VPC + in-account Bedrock endpoint + Flow Logs), security (KMS + Bedrock Guardrail with PHI filters + Cognito `hpp_role` + least-privilege role), data (append-only audit + HITL + WORM Object Lock), connectors Lambda, dual MCP gateway (portable API Gateway+Cognito JWT / AgentCore), and agent-service (Step Functions waitForTaskToken HITL | Fargate). **8 templates pass cfn-lint clean.** Plus `scripts/deploy.sh` + `build_lambdas.sh`.
+- **infra/cloudformation (Agent 01)** — built & validated: quickstart master nesting network (VPC + in-account Bedrock endpoint + Flow Logs), security (KMS + Bedrock Guardrail with PHI filters + Cognito `hpp_role` + least-privilege role), data (append-only audit + HITL + WORM Object Lock), connectors Lambda, dual MCP gateway (portable API Gateway+Cognito JWT — the supported path; the AgentCore variant is **experimental — incomplete**, missing per-tool `ToolSchema`), and agent-service (Step Functions waitForTaskToken HITL | Fargate). **8 templates pass cfn-lint clean.** Plus `scripts/deploy.sh` + `build_lambdas.sh`.
 - **Agent 02 — Prior-Authorization** — built to reference depth: requirement check (Da Vinci
   CRD), evidence assembly, MCG/InterQual criteria evaluation, grounded rationale, framework-
   enforced HITL before submission, monitor/escalate, full test suite + 4-doc set + live runbook.

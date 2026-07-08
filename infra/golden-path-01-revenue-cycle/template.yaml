@@ -41,11 +41,24 @@ Parameters:
       Optional Bedrock foundation-model ARN the agent may invoke (e.g.
       arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0).
       Empty in fixture mode -> no bedrock permission and no bedrock-runtime endpoint.
+  PhiEngine:
+    Type: String
+    Default: deterministic
+    AllowedValues: [deterministic, comprehend_medical]
+    Description: >
+      PHI masking engine for log/audit boundaries. "deterministic" (default) uses
+      the dependency-free Safe-Harbor regex masker only. "comprehend_medical"
+      ADDITIONALLY runs Amazon Comprehend Medical DetectPHI (HIPAA-eligible;
+      belt-and-suspenders with the deterministic pass, fail-closed). Only when set
+      to comprehend_medical is the comprehendmedical:DetectPHI IAM permission granted.
 
 Conditions:
   HasBedrockModel: !Not [!Equals [!Ref BedrockModelArn, ""]]
   HasDdbPl: !Not [!Equals [!Ref DynamoDbPrefixListId, ""]]
   HasS3Pl: !Not [!Equals [!Ref S3PrefixListId, ""]]
+  # Grants comprehendmedical:DetectPHI ONLY when the opt-in Comprehend Medical
+  # PHI engine is selected. Default (deterministic) grants no Comprehend perms.
+  UsesComprehendMedical: !Equals [!Ref PhiEngine, comprehend_medical]
 
 Globals:
   Function:
@@ -60,6 +73,9 @@ Globals:
     Environment:
       Variables:
         CONNECTOR_MODE: fixture
+        # Selects the PHI masking engine (see PhiEngine parameter). "comprehend_medical"
+        # is opt-in and requires the gated comprehendmedical:DetectPHI permission below.
+        PHI_ENGINE: !Ref PhiEngine
         AUDIT_TABLE: !Ref AuditTable
         HITL_TABLE: !Ref HitlTable
         JTI_TABLE: !Ref JtiTable
@@ -329,6 +345,15 @@ Resources:
               - HasBedrockModel
               - {Effect: Allow, Action: [bedrock:InvokeModel], Resource: !Ref BedrockModelArn}
               - !Ref AWS::NoValue
+            # Comprehend Medical PHI detection — required ONLY when PHI_ENGINE=comprehend_medical.
+            # Default (deterministic) PHI masking grants no Comprehend permission. DetectPHI has
+            # no resource-level scoping, so Resource must be "*"; the account-scoped condition
+            # keeps it in-account. Add DetectEntitiesV2 here too if that API is ever used.
+            - !If
+              - UsesComprehendMedical
+              - {Effect: Allow, Action: [comprehendmedical:DetectPHI], Resource: "*",
+                 Condition: {StringEquals: {"aws:PrincipalAccount": !Ref "AWS::AccountId"}}}
+              - !Ref AWS::NoValue
       Events:
         Tool:
           Type: HttpApi
@@ -407,6 +432,15 @@ Resources:
             - !If
               - HasBedrockModel
               - {Effect: Allow, Action: [bedrock:InvokeModel], Resource: !Ref BedrockModelArn}
+              - !Ref AWS::NoValue
+            # Comprehend Medical PHI detection — required ONLY when PHI_ENGINE=comprehend_medical.
+            # Default (deterministic) PHI masking grants no Comprehend permission. DetectPHI has
+            # no resource-level scoping, so Resource must be "*"; the account-scoped condition
+            # keeps it in-account. Add DetectEntitiesV2 here too if that API is ever used.
+            - !If
+              - UsesComprehendMedical
+              - {Effect: Allow, Action: [comprehendmedical:DetectPHI], Resource: "*",
+                 Condition: {StringEquals: {"aws:PrincipalAccount": !Ref "AWS::AccountId"}}}
               - !Ref AWS::NoValue
 
   # Real denial workflow: load -> analyze -> (appealable?) -> gather -> draft -> compliance ->
@@ -574,3 +608,6 @@ Outputs:
   StateMachineArn: {Value: !Ref DenialWorkflow}
   AppealOutboxUrl: {Value: !Ref AppealOutbox}
   WormBucketName: {Value: !Ref WormBucket}
+  PhiEngineName:
+    Description: Selected PHI masking engine (deterministic | comprehend_medical)
+    Value: !Ref PhiEngine

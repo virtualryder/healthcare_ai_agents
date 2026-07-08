@@ -1,5 +1,13 @@
 """PHI masker tests — HIPAA Safe Harbor identifiers redacted; code sets preserved."""
-from hpp_agent_platform.phi import mask, luhn_valid
+import sys
+import types
+
+from hpp_agent_platform.phi import (
+    MASK_FAILURE_PLACEHOLDER,
+    ML_MASK_FALLBACK_FLAG,
+    luhn_valid,
+    mask,
+)
 
 
 def test_ssn_and_contact_masked():
@@ -28,3 +36,46 @@ def test_mask_idempotent_and_none_safe():
     once = mask("SSN 123-45-6789")
     assert mask(once) == once
     assert mask(None) == ""
+
+
+def test_ml_hook_failure_fails_closed(monkeypatch):
+    """Round-2 hardening: a raising ML NER hook must NEVER leak unmasked input.
+
+    The deterministic Safe-Harbor output must stand, plus an audit-visible
+    warning flag marking the degraded (fallback) masking path.
+    """
+    broken = types.ModuleType("hpp_agent_platform._ml_ner")
+
+    def _boom(text):
+        raise RuntimeError("ml engine down")
+
+    broken.redact = _boom
+    monkeypatch.setitem(sys.modules, "hpp_agent_platform._ml_ner", broken)
+    monkeypatch.setenv("MASK_ENGINE", "ml")
+
+    out = mask("Patient SSN 123-45-6789, email jane.doe@example.com")
+    assert "123-45-6789" not in out
+    assert "jane.doe@example.com" not in out
+    assert "[SSN-REDACTED]" in out and "[EMAIL-REDACTED]" in out
+    assert ML_MASK_FALLBACK_FLAG in out  # degradation is audit-visible
+
+
+def test_ml_hook_total_failure_returns_placeholder(monkeypatch):
+    """Last resort: if the deterministic fallback ALSO fails, redact everything."""
+    from hpp_agent_platform import phi
+
+    broken = types.ModuleType("hpp_agent_platform._ml_ner")
+
+    def _boom(text):
+        raise RuntimeError("ml engine down")
+
+    broken.redact = _boom
+    monkeypatch.setitem(sys.modules, "hpp_agent_platform._ml_ner", broken)
+
+    def _also_boom(text):
+        raise ValueError("regex engine hosed")
+
+    monkeypatch.setattr(phi, "_apply_deterministic", _also_boom)
+    out = phi._ml_mask("SSN 123-45-6789")
+    assert out == MASK_FAILURE_PLACEHOLDER
+    assert "123-45-6789" not in out

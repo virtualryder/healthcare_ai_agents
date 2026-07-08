@@ -28,7 +28,7 @@ Live-AWS cells reflect the 2026-06-29 validation-account run of the Agent 01 gol
 
 | Capability | Designed | Implemented (offline/tested) | Deployed on AWS (validated) | Integration-tested on AWS | Production-ready | Owner (Repo/Customer) |
 |---|:--:|:--:|:--:|:--:|:--:|---|
-| Identity / authN | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (JWT verification unit-tested; IdP integration: Customer) |
+| Identity / authN | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (JWT verification unit-tested; SAML/OIDC IdP federation addon: `infra/cloudformation/idp-federation.yaml` + `docs/IDP-FEDERATION-RUNBOOK.md`; live IdP integration: Customer) |
 | MCP / tool authorization gateway | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (golden-path scope, Agent 01) |
 | Policy enforcement (deny-by-default) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (acceptance test: read ALLOW, gated write PENDING) |
 | Human approval (SoD, single-use) | ✅ | ✅ | ✅ | ◻ | ◻ | Repo (gate proven to hold live; full approve/resume verified offline) |
@@ -126,6 +126,10 @@ agents across a journey **without widening authority** (`ENTERPRISE-PLATFORM.md`
 ---
 
 ## 3. Security architecture & how it satisfies the regulations
+
+> **Auditors / GRC / TPRM reviewers:** the [`assurance/`](assurance/README.md) packet is a single
+> curated cover sheet indexing every threat-model, NIST/HIPAA/Part-2 control-mapping, evidence,
+> and shared-responsibility artifact under standard assurance headings.
 
 ![PHI data flow — masking before model and audit, Bedrock under the AWS BAA](docs/diagrams/phi-data-flow.png)
 
@@ -233,7 +237,7 @@ day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklis
 ## Repository map
 ```
 README.md  GETTING-STARTED.md  ENTERPRISE-PLATFORM.md  SECURITY.md  SUITE-STATUS.md  SOURCES.md
-CHANGELOG.md  VERSION  CONTRIBUTING.md  IMPROVEMENTS-OVER-SLG.md  Makefile
+CHANGELOG.md  VERSION  CONTRIBUTING.md  Makefile
 01-..08-*-agent/                       # 8 agents (code, tests, docs, deploy runbook, deck)
 platform_core/hpp_agent_platform/      # gateway, jwt_verify, approvals, audit(+sinks), masker, LLM factory, connectors, A2A
 care_platform/hpp_care_platform/       # govern, canonical, consent, saga, events, journeys (orchestration platform)

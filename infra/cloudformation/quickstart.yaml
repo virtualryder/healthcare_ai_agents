@@ -4,7 +4,8 @@ Description: >
   Flow Logs + Bedrock VPC endpoint), security (KMS, Bedrock Guardrail with PHI filters,
   Cognito, least-privilege roles), data (append-only PHI-masked audit + S3 Object Lock WORM +
   HITL table), connectors (one governed Lambda per system of record), the MCP gateway
-  (portable API Gateway + Cognito JWT, or Bedrock AgentCore Gateway), and the agent
+  (portable API Gateway + Cognito JWT - the supported default; the Bedrock AgentCore Gateway
+  variant is EXPERIMENTAL and incomplete, see agentcore-gateway.yaml), and the agent
   (native Step Functions + waitForTaskToken HITL, or container). New account -> running,
   HIPAA-defensible agent. Requires an AWS Business Associate Agreement for PHI workloads.
 Parameters:

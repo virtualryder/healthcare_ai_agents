@@ -29,8 +29,10 @@ intersection of the agent's grant and the invoking user's entitlement** — so t
 never exceed the human. It issues **short-lived, tool-scoped tokens**, enforces the
 framework human-approval gate on high-risk writes, and withholds dangerous capabilities by
 policy (notably `payer.issue_determination`, withheld from all agents).
-**AWS:** Bedrock AgentCore Gateway/Identity, or the portable build of API Gateway +
-Cognito (`custom:hpp_role` claim) + STS for scoped tokens.
+**AWS:** the portable build of API Gateway + Cognito (`custom:hpp_role` claim) + STS for
+scoped tokens — the supported pattern (used by the golden path). Bedrock AgentCore
+Gateway/Identity is the managed alternative, but the shipped template is **experimental —
+incomplete** (missing per-tool `ToolSchema`; see `infra/cloudformation/agentcore-gateway.yaml`).
 
 ### 4. Connector framework
 Typed adapters to the systems of record — EHR, clearinghouse, payer portal, FHIR/Da Vinci

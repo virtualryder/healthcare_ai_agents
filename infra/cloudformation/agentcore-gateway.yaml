@@ -1,9 +1,19 @@
 AWSTemplateFormatVersion: "2010-09-09"
+# ⚠️ EXPERIMENTAL (round-2): the AgentCore Gateway path is a reference, not the
+# default. AWS's MCP Lambda target requires BOTH LambdaArn AND a ToolSchema per target;
+# the targets below supply LambdaArn only and must be completed with each tool's schema
+# before this stack will deploy. The PORTABLE path (gateway-portable.yaml / the golden
+# path's API Gateway + Cognito JWT gateway) is the supported default. See the Aegis
+# platform repo Run 10 for the live-validated MCP endpoint pattern. Do not describe
+# the two paths as interchangeable until schemas land.
 Description: >
-  HPP Suite - MCP gateway (AGENTCORE path - Bedrock AgentCore Gateway + Identity). For
-  AgentCore-enabled Regions. Each connector Lambda is registered as an MCP tool TARGET;
-  target names map 1:1 to platform_core's TOOL_REGISTRY (<kind>.<method>). Inbound auth via
-  AgentCore Identity (Cognito/OIDC); outbound auth via the gateway role.
+  HPP Suite - MCP gateway (AGENTCORE path - Bedrock AgentCore Gateway + Identity).
+  EXPERIMENTAL - incomplete (ToolSchema pending API confirmation); the supported
+  gateway is the portable API Gateway + Cognito JWT pattern in the golden path
+  (see the Aegis platform repo Run 10 for the live-validated MCP endpoint pattern).
+  For AgentCore-enabled Regions. Each connector Lambda is registered as an MCP tool
+  TARGET; target names map 1:1 to platform_core's TOOL_REGISTRY (<kind>.<method>).
+  Inbound auth via AgentCore Identity (Cognito/OIDC); outbound auth via the gateway role.
 Parameters:
   AgentId: {Type: String, Default: 01-revenue-cycle-denial}
   Environment: {Type: String, Default: dev}

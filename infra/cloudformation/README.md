@@ -18,7 +18,8 @@ PHI.**
 | `data.yaml` | Append-only DynamoDB audit (PITR, KMS), HITL table, **S3 Object Lock COMPLIANCE (WORM, 7-yr default)** |
 | `connectors.yaml` | One governed connector dispatcher Lambda — the only thing that talks to a system of record |
 | `gateway-portable.yaml` | MCP layer **Path A** — API Gateway HTTP API + Cognito JWT authorizer (**any commercial Region, day one**) |
-| `agentcore-gateway.yaml` | MCP layer **Path B** — Bedrock AgentCore Gateway + Identity (AgentCore Regions) |
+| `agentcore-gateway.yaml` | MCP layer **Path B** — Bedrock AgentCore Gateway + Identity. **EXPERIMENTAL — incomplete** (targets lack the required per-tool `ToolSchema`, pending API confirmation); Path A is the supported default |
+| `idp-federation.yaml` | **Optional addon** — enterprise IdP (SAML/OIDC) federation for an existing HPP Cognito pool: `UserPoolIdentityProvider` + hosted-UI domain + federated app client mapping the IdP group claim to `custom:hpp_role`. See [`../../docs/IDP-FEDERATION-RUNBOOK.md`](../../docs/IDP-FEDERATION-RUNBOOK.md) |
 | `agent-service.yaml` | The agent — native (Step Functions + `waitForTaskToken` HITL) or container (ECS Fargate / AgentCore Runtime) |
 
 ```bash
@@ -37,8 +38,13 @@ aws cloudformation deploy --template-file quickstart.yaml \
 
 ### Two gateway paths, one policy (`GatewayMode`)
 Both front doors route to the **same connector Lambda** and enforce the **same** deny-by-default
-decision from `platform_core`. `portable` deploys anywhere day one; `agentcore` is for
-AgentCore-enabled Regions. Migrating A→B changes only the gateway stack.
+decision from `platform_core`. `portable` deploys anywhere day one and is the **supported
+default**. `agentcore` is **experimental — incomplete**: AWS's MCP Lambda target requires both
+`LambdaArn` and a per-tool `ToolSchema`, and the schemas are pending API confirmation, so the
+template will not deploy as-is (see the header of `agentcore-gateway.yaml`). The supported
+gateway is the portable API Gateway + Cognito JWT pattern (also used by the golden path); see
+the Aegis platform repo Run 10 for the live-validated MCP endpoint pattern. Do not describe the
+two paths as interchangeable until schemas land.
 
 ### Two ways to run the agent (`DeployMode`)
 `native` — deterministic core in Lambda, Bedrock drafting, **Step Functions** with a

@@ -77,12 +77,15 @@ The fourth argument to `scripts/deploy.sh` selects the agent service runtime:
 
 The third argument selects the gateway:
 
-- **`portable`** — API Gateway + Cognito + STS. Works in **every Region**. The default.
-- **`agentcore`** — Amazon Bedrock AgentCore Gateway/Identity. Use only in Regions where
-  AgentCore is available; otherwise the deploy falls back to `portable`. (See
-  `docs/AWS-ACCOUNT-PREREQUISITES.md` for the Region check.)
+- **`portable`** — API Gateway + Cognito + STS. Works in **every Region**. The default and
+  the **supported** gateway (the same pattern the acceptance-gated golden path deploys).
+- **`agentcore`** — Amazon Bedrock AgentCore Gateway/Identity. **EXPERIMENTAL — incomplete**:
+  the template's MCP Lambda targets still lack the required per-tool `ToolSchema` (pending API
+  confirmation), so it will not deploy as-is; it also requires an AgentCore-enabled Region.
+  Use `portable` (see the header of `infra/cloudformation/agentcore-gateway.yaml` and the
+  Aegis platform repo Run 10 for the live-validated MCP endpoint pattern).
 
 ## Summary
 Start standalone, one isolated stack per agent with its own VPC/KMS/Cognito/audit/gateway. Choose
-CloudFormation or Terraform, native or container, portable or agentcore — independently. Adopt the
+CloudFormation or Terraform, native or container, portable or agentcore (experimental) — independently. Adopt the
 orchestration platform later, agent by agent, with no re-platforming and no widening of authority.

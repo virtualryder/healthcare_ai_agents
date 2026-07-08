@@ -49,8 +49,11 @@ scripts/deploy.sh <AgentId> <env> <portable|agentcore> <native|container> s3://b
 
 - **`<AgentId>`** — one of `01-revenue-cycle-denial` … `08-contact-center-member-services`.
 - **`<env>`** — e.g. `dev`, `stage`, `prod`.
-- **`<portable|agentcore>`** — gateway mode: `portable` (API Gateway + Cognito + STS) or
-  `agentcore` (Bedrock AgentCore Gateway/Identity).
+- **`<portable|agentcore>`** — gateway mode: `portable` (API Gateway + Cognito + STS — the
+  supported default) or `agentcore` (Bedrock AgentCore Gateway/Identity — **experimental,
+  incomplete**: the template's MCP targets lack the required per-tool `ToolSchema` (pending API
+  confirmation) and will not deploy as-is; see the header of
+  `infra/cloudformation/agentcore-gateway.yaml`).
 - **`<native|container>`** — deploy mode for the agent service.
 - **`s3://bucket/prefix`** — where nested templates are staged (required).
 - **`<VpcCidr>`** — per-agent VPC CIDR (defaults `10.30.0.0/16` … `10.37.0.0/16`; see
@@ -99,7 +102,9 @@ Drive one high-risk action end to end and confirm the gate holds:
 ## 5. Go-live checklist (engagement work)
 
 - [ ] AWS BAA executed; SI BAA executed; no PHI used before both are in place.
-- [ ] Enterprise **IdP integrated** with Cognito; `custom:hpp_role` mapped to real roles.
+- [ ] Enterprise **IdP integrated** with Cognito; `custom:hpp_role` mapped to real roles
+      (optional addon: `infra/cloudformation/idp-federation.yaml` +
+      `docs/IDP-FEDERATION-RUNBOOK.md` — SAML/OIDC federation for Okta/Entra).
 - [ ] **Live connectors** validated against the real EHR / clearinghouse / payer portal /
       FHIR APIs (move off fixture mode).
 - [ ] **CSV/CSA validation** plan executed and signed off by the Healthcare Org.
@@ -112,7 +117,9 @@ Drive one high-risk action end to end and confirm the gate holds:
 
 ## Troubleshooting
 - **`cfn-lint` or deploy fails on a resource** — confirm the Region supports the resource (Bedrock
-  Guardrails, AgentCore). For Regions without AgentCore, use `GatewayMode=portable` (the default).
+  Guardrails, AgentCore). Use `GatewayMode=portable` (the default and the supported gateway);
+  `agentcore` is experimental and incomplete (missing per-tool `ToolSchema`) and is expected to
+  fail to deploy as-is.
 - **Bedrock AccessDenied** — enable model access for the chosen model in the Bedrock console for
   the Region, and confirm the agent role allows `bedrock:InvokeModel` / `bedrock:ApplyGuardrail`.
 - **CIDR overlap deploying multiple agents** — give each agent a distinct `VpcCidr`

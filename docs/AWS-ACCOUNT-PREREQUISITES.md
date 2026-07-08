@@ -48,11 +48,12 @@ Confirm headroom in the **target Region** — defaults are often too low for a p
       CloudFormation can read the staged templates.
 
 ## 7. AgentCore Region check (else portable)
-- [ ] Check whether **Amazon Bedrock AgentCore Gateway/Identity** is available in your target
-      Region.
-  - Available → you may deploy with `GatewayMode=agentcore`.
-  - **Not available → use `GatewayMode=portable`** (API Gateway + Cognito + STS — the default and
-    works in every Region). The deploy falls back to portable when AgentCore is absent.
+- [ ] Use **`GatewayMode=portable`** (API Gateway + Cognito + STS — the default, works in every
+      Region, and the **supported** gateway).
+- [ ] `GatewayMode=agentcore` (Amazon Bedrock AgentCore Gateway/Identity) is **experimental —
+      incomplete**: the template's MCP targets lack the required per-tool `ToolSchema` (pending
+      API confirmation) and will not deploy as-is, and it additionally requires an
+      AgentCore-enabled Region. See the header of `infra/cloudformation/agentcore-gateway.yaml`.
 
 ## 8. Detective controls baseline
 Enable the account-level baseline before go-live (customer-owned; the matrix marks these

@@ -24,7 +24,9 @@ reason over and cite. Masking them would break grounding and coding validation.
 
 Design notes:
   * Deterministic and dependency-free (regex + Luhn). An optional ML NER pass
-    (Amazon Comprehend Medical / Presidio) can be layered behind MASK_ENGINE=ml.
+    can be layered on: the AWS-native Amazon Comprehend Medical DetectPHI engine
+    (PHI_ENGINE=comprehend_medical), or a generic pluggable NER hook
+    (MASK_ENGINE=ml). Both are strictly additive to the deterministic pass.
   * Conservative: over-masking a log line is acceptable; leaking PHI is not.
   * mask() is idempotent and safe to call on already-masked text.
 
@@ -91,15 +93,13 @@ def _mask_cards(text: str) -> str:
     return _CARD_RE.sub(repl, text)
 
 
-def mask(text: Optional[str]) -> str:
-    """
-    Mask PHI/PII identifiers in free text for safe logging and audit.
+# ── Fail-closed markers (round-2 hardening) ──────────────────────────────────
+ML_MASK_FALLBACK_FLAG = "[PHI-MASK-WARNING: ML-ENGINE-FAILED; DETERMINISTIC-FALLBACK-APPLIED]"
+MASK_FAILURE_PLACEHOLDER = "[REDACTED: PHI-MASKING-FAILURE]"
 
-    Idempotent; returns "" for None. Set MASK_ENGINE=ml to additionally run an
-    optional NER engine (Amazon Comprehend Medical / Presidio — not bundled).
-    """
-    if not text:
-        return ""
+
+def _apply_deterministic(text: str) -> str:
+    """The deterministic regex/Safe-Harbor pass — the always-on masking baseline."""
     out = str(text)
     out = _SSN_RE.sub("[SSN-REDACTED]", out)
     out = _EMAIL_RE.sub("[EMAIL-REDACTED]", out)
@@ -110,17 +110,71 @@ def mask(text: Optional[str]) -> str:
     out = _ADDRESS_RE.sub("[ADDRESS-REDACTED]", out)
     out = _DATE_RE.sub("[DATE-REDACTED]", out)
     out = _LONGNUM_RE.sub("[ID-REDACTED]", out)
+    return out
 
+
+def _ml_engine_selected() -> bool:
+    """True when an optional ML NER pass should run in addition to deterministic."""
     if os.getenv("MASK_ENGINE", "").strip().lower() == "ml":
+        return True
+    if os.getenv("PHI_ENGINE", "").strip().lower() == "comprehend_medical":
+        return True
+    return False
+
+
+def mask(text: Optional[str]) -> str:
+    """
+    Mask PHI/PII identifiers in free text for safe logging and audit.
+
+    Idempotent; returns "" for None. Two opt-in ML NER routes layer an additional
+    pass on top of the always-on deterministic Safe-Harbor masker:
+    PHI_ENGINE=comprehend_medical (Amazon Comprehend Medical DetectPHI, HIPAA-
+    eligible, reached over the regional API / PrivateLink under the AWS BAA) or
+    MASK_ENGINE=ml (a generic pluggable NER hook). The ML pass is strictly
+    additive and fail-closed: the deterministic Safe-Harbor pass ALWAYS runs
+    (before and after the ML pass — belt and suspenders), and if the ML pass
+    fails the deterministic output stands (with an audit-visible
+    ML_MASK_FALLBACK_FLAG). Unmasked input is never returned.
+    """
+    if not text:
+        return ""
+    out = _apply_deterministic(str(text))
+    if _ml_engine_selected():
         out = _ml_mask(out)
     return out
 
 
-def _ml_mask(text: str) -> str:
-    """Optional ML NER hook (Amazon Comprehend Medical / Presidio). No-op if absent."""
-    try:  # pragma: no cover - optional dependency path
-        from hpp_agent_platform._ml_ner import redact  # type: ignore
+def _resolve_ml_redactor():
+    """
+    Resolve the redaction callable for the selected ML engine.
+    PHI_ENGINE=comprehend_medical takes precedence and binds the AWS-native
+    Comprehend Medical redact; otherwise the generic _ml_ner.redact hook is used.
+    Raises ImportError if the selected engine's dependency is absent.
+    """
+    if os.getenv("PHI_ENGINE", "").strip().lower() == "comprehend_medical":
+        from hpp_agent_platform.comprehend_medical import redact  # type: ignore
+        return redact
+    from hpp_agent_platform._ml_ner import redact  # type: ignore
+    return redact
 
-        return redact(text)
+
+def _ml_mask(text: str) -> str:
+    """
+    Optional ML NER hook (Amazon Comprehend Medical / generic NER) — FAIL-CLOSED.
+    On the success path the deterministic Safe-Harbor pass is re-applied AFTER
+    the ML redaction (Comprehend Medical + regex together, never one alone).
+    engine absent -> deterministic output stands; engine raises -> deterministic
+    fallback + ML_MASK_FALLBACK_FLAG; deterministic also raises -> the
+    MASK_FAILURE_PLACEHOLDER. The unmasked input is NEVER returned on failure.
+    """
+    try:
+        redact = _resolve_ml_redactor()
+    except ImportError:  # optional dependency absent — expected in most deploys
+        return _apply_deterministic(text)
+    try:
+        return _apply_deterministic(redact(text))
     except Exception:
-        return text
+        try:
+            return f"{_apply_deterministic(text)} {ML_MASK_FALLBACK_FLAG}"
+        except Exception:
+            return MASK_FAILURE_PLACEHOLDER

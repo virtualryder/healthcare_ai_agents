@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  HPP Suite - OPTIONAL enterprise IdP federation ADDON. Federates an existing HPP
+  Cognito user pool (from security.yaml or the golden path) to the customer's
+  SAML/OIDC identity provider (Okta / Microsoft Entra ID / AD FS): an
+  AWS::Cognito::UserPoolIdentityProvider, a hosted-UI domain, and a federated app
+  client whose ID token carries email + custom:hpp_role — the claim the MCP
+  gateway authorizes on. Deploying this stack is entirely additive: the base
+  stacks and their native-Cognito app client are untouched, so default deploys
+  are unchanged. Federation resources are created only when IdpMetadataUrl is
+  non-empty (Condition FederationEnabled). See docs/IDP-FEDERATION-RUNBOOK.md
+  for the Okta / Entra metadata-exchange and claim-mapping steps.
+
+Parameters:
+  AgentId: {Type: String, Default: 01-revenue-cycle-denial}
+  Environment: {Type: String, Default: dev, AllowedValues: [dev, test, prod]}
+  UserPoolId:
+    Type: String
+    Description: >
+      Existing HPP Cognito user pool to federate (output UserPoolId of
+      security.yaml or of the golden-path stack). The pool must define the
+      custom:hpp_role schema attribute (both HPP pools do).
+  IdpMetadataUrl:
+    Type: String
+    Default: ""
+    Description: >
+      SAML metadata document URL for the customer IdP (Okta/Entra/AD FS).
+      Non-empty turns federation ON; empty (default) creates nothing, so the
+      stack is a safe no-op. For OIDC IdPs see the ProviderType/ProviderDetails
+      swap in docs/IDP-FEDERATION-RUNBOOK.md.
+  CallbackUrl:
+    Type: String
+    Default: "https://localhost/callback"
+    Description: >
+      OAuth callback (redirect) URL registered on the federated app client for
+      the hosted UI / reviewer app; also registered as the logout URL.
+  UserPoolDomainPrefix:
+    Type: String
+    Default: ""
+    Description: >
+      Hosted-UI domain prefix (the {prefix}.auth.<region>.amazoncognito.com
+      label). Lowercase letters, numbers and hyphens; globally unique per
+      Region. Empty = a deterministic hpp-<AgentId>-<Environment>-<account>
+      default.
+  IdpEmailClaim:
+    Type: String
+    Default: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+    Description: SAML claim URI carrying the user's email (audit identity, separation-of-duties).
+  IdpRoleClaim:
+    Type: String
+    Default: "http://schemas.xmlsoap.org/claims/Group"
+    Description: >
+      SAML claim URI carrying the group/role assertion mapped into
+      custom:hpp_role — the claim the gateway reads to decide who may approve.
+
+Conditions:
+  # Federation is wired only when the customer passes a non-empty metadata URL.
+  FederationEnabled: !Not [!Equals [!Ref IdpMetadataUrl, ""]]
+  # Use the explicit domain prefix when supplied, else a deterministic default.
+  HasDomainPrefix: !Not [!Equals [!Ref UserPoolDomainPrefix, ""]]
+
+Resources:
+  # External (customer) identity provider — SAML via the customer metadata URL.
+  # AttributeMapping carries the IdP-asserted email and the group/role claim
+  # into Cognito: the role claim lands in custom:hpp_role, which the MCP
+  # gateway authorizer reads for deny-by-default entitlement and approval
+  # authority. OIDC is an accepted alternative — see the runbook.
+  CustomerIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Condition: FederationEnabled
+    Properties:
+      UserPoolId: !Ref UserPoolId
+      ProviderName: CustomerIdP
+      ProviderType: SAML
+      ProviderDetails:
+        MetadataURL: !Ref IdpMetadataUrl
+        IDPSignout: "true"
+      AttributeMapping:
+        email: !Ref IdpEmailClaim
+        "custom:hpp_role": !Ref IdpRoleClaim
+
+  # Hosted-UI domain — the federated sign-in entry point and the OAuth
+  # callback/logout origin.
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Condition: FederationEnabled
+    Properties:
+      Domain: !If
+        - HasDomainPrefix
+        - !Ref UserPoolDomainPrefix
+        - !Sub "hpp-${AgentId}-${Environment}-${AWS::AccountId}"
+      UserPoolId: !Ref UserPoolId
+
+  # Federated app client — a NEW client (the base stacks' native client is left
+  # untouched) that accepts the external IdP, runs the OAuth code flow through
+  # the hosted UI, and issues the JWTs the portable gateway authorizer verifies
+  # (email + custom:hpp_role claims).
+  FederatedUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Condition: FederationEnabled
+    DependsOn: CustomerIdentityProvider
+    Properties:
+      ClientName: !Sub "hpp-${AgentId}-${Environment}-federated"
+      UserPoolId: !Ref UserPoolId
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      SupportedIdentityProviders: [COGNITO, CustomerIdP]
+      CallbackURLs: [!Ref CallbackUrl]
+      LogoutURLs: [!Ref CallbackUrl]
+
+Outputs:
+  FederationEnabled:
+    Description: Whether an external customer IdP is wired (true when IdpMetadataUrl was non-empty).
+    Value: !If [FederationEnabled, "true", "false"]
+  HostedUiDomain:
+    Condition: FederationEnabled
+    Description: Cognito hosted-UI domain prefix for federated sign-in.
+    Value: !Ref UserPoolDomain
+  FederatedClientId:
+    Condition: FederationEnabled
+    Description: >
+      App client ID for federated sign-in. Add it to the gateway authorizer's
+      JWT audience list (portable gateway: the JwtConfiguration audience) so
+      federated tokens are accepted alongside the native client.
+    Value: !Ref FederatedUserPoolClient
