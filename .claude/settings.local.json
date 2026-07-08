@@ -37,7 +37,10 @@
       "Bash(aws sts:*)",
       "Bash(sam:*)",
       "Bash(aws configure:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(python3 -c \"import zipfile; z=zipfile.ZipFile\\(''decks/HPP-01-Revenue-Cycle-Denial.pptx''\\); print\\([n for n in z.namelist\\(\\) if ''image'' in n.lower\\(\\) or ''media'' in n.lower\\(\\)]\\); z.close\\(\\)\")",
+      "Bash(python -c \"import zipfile; z=zipfile.ZipFile\\(''decks/HPP-01-Revenue-Cycle-Denial.pptx''\\); print\\([n for n in z.namelist\\(\\) if ''image'' in n.lower\\(\\) or ''media'' in n.lower\\(\\)]\\); z.close\\(\\)\")",
+      "Bash(python:*)"
     ]
   }
 }
