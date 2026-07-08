@@ -11,9 +11,9 @@ executed **AWS Business Associate Agreement (BAA)** before go-live. See
 `docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`.
 
 ## Reporting a vulnerability
-Report suspected vulnerabilities privately to the maintainer: **ryderdavid75@gmail.com**
-(subject: `SECURITY — healthcare_ai_agents`). Include affected file/commit, reproduction, and
-impact. Do **not** open a public issue for an unfixed vulnerability. Target: acknowledgement in
+Report vulnerabilities privately via GitHub Security Advisories: use the *Security* tab →
+*Report a vulnerability* on this repository. Please do not open public issues for security
+reports. Include affected file/commit, reproduction, and impact. Target: acknowledgement in
 5 business days; triage + remediation plan in 15.
 
 ## In scope
@@ -43,7 +43,7 @@ impact. Do **not** open a public issue for an unfixed vulnerability. Target: ack
    `infra/cloudformation/data.yaml`).
 6. **Fail-closed PHI masking** (`phi.py`, HIPAA Safe Harbor identifiers) + **Bedrock Guardrails**
    on input and output.
-7. **In-account inference** — Bedrock via VPC endpoint under the AWS BAA; no PHI egress.
+7. **Private-connectivity inference** — Bedrock via VPC endpoint (AWS PrivateLink) under the AWS BAA; no PHI egress to external AI APIs — traffic to the regional Bedrock service stays on AWS private networking.
 
 Full threat model: `docs/THREAT-MODEL.md`. Control-to-NIST mapping:
 `docs/NIST-800-53-CONTROL-MATRIX.md`. OWASP-LLM / MITRE ATLAS mapping:

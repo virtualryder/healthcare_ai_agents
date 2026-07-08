@@ -7,14 +7,14 @@ system, and the suite runs in **fixture mode** until live connectors and the BAA
 
 ## 1. Legal — AWS BAA
 - [ ] **AWS Business Associate Agreement (BAA) executed** with AWS (via AWS Artifact /
-      Organizations). Required before any PHI. In-account Bedrock under the BAA is what keeps PHI
+      Organizations). Required before any PHI. HIPAA-eligible Bedrock under the BAA is what keeps PHI
       from egressing to an external model. No BAA → fixture mode only.
 - [ ] SI / partner BAA executed with the customer (separate from the AWS BAA).
 
 ## 2. Amazon Bedrock — model access in-Region
 - [ ] **Bedrock model access enabled** for the chosen foundation model **in your target Region**
-      (Bedrock console → Model access). In-account inference keeps PHI under the BAA — no external
-      egress.
+      (Bedrock console → Model access). Inference via PrivateLink to HIPAA-eligible Bedrock keeps
+      PHI under the BAA — no egress to external AI APIs.
 - [ ] Agent role permitted `bedrock:InvokeModel` and `bedrock:ApplyGuardrail` (provisioned by the
       security stack; confirm not denied by an SCP).
 - [ ] **Bedrock Guardrails** available in-Region (PHI filters + the unauthorized-determination

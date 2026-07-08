@@ -3,8 +3,8 @@ Enforcement acceptance tests — the "failing-on-purpose" gate.
 
 These prove that, in a DEPLOYED posture (AUTH_REQUIRE_BOUND_APPROVAL=1), the gateway
 ENFORCES the controls the README claims, rather than only modeling them. Each test maps
-to a step of the clean-account acceptance test in REMEDIATION-PLAN.md §4 and to a finding
-it closes:
+to a step of the clean-account acceptance test (infra/golden-path-01-revenue-cycle/acceptance_test.sh)
+and to a finding it closes:
 
   * self-approval blocked .................... F2 (separation of duties at mint)
   * fabricated/unauthenticated reviewer blocked  F2 (demo path closed when flag set)

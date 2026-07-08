@@ -8,7 +8,7 @@
 A **reference accelerator** of **8 governed healthcare AI agents** — each a standalone reference
 architecture (own VPC, identity, data, and audit stack) — plus an optional **Care & Claims
 Orchestration Platform** that coordinates them across a patient/member journey. A **no-API-key
-automated test suite (144 tests)** exercises the control plane, including negative-case tests for
+automated test suite (185 tests green as of 2026-07-07)** exercises the control plane, including negative-case tests for
 cryptographic JWT verification, bound single-use approvals, the tamper-evident audit chain, and
 fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md` /
 `gtm/HPP-DECK-SOURCES.md`.
@@ -21,11 +21,36 @@ fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md
 > penetration testing, and HITRUST/SOC 2 authorization are customer-engagement work.** See
 > `docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md` (gap assessment + RACI).
 
+## Capability maturity matrix
+
+✅ = evidence in this repo (code + tests, or the documented live AWS validation) · ◻ = not done here / engagement work.
+Live-AWS cells reflect the 2026-06-29 validation-account run of the Agent 01 golden path (stack `hpp-gp01-acc`: deploy → acceptance test → teardown); the other agents share the same templates but were not individually stood up.
+
+| Capability | Designed | Implemented (offline/tested) | Deployed on AWS (validated) | Integration-tested on AWS | Production-ready | Owner (Repo/Customer) |
+|---|:--:|:--:|:--:|:--:|:--:|---|
+| Identity / authN | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (JWT verification unit-tested; IdP integration: Customer) |
+| MCP / tool authorization gateway | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (golden-path scope, Agent 01) |
+| Policy enforcement (deny-by-default) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (acceptance test: read ALLOW, gated write PENDING) |
+| Human approval (SoD, single-use) | ✅ | ✅ | ✅ | ◻ | ◻ | Repo (gate proven to hold live; full approve/resume verified offline) |
+| PII/PHI masking | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (fail-closed masking unit-tested; not runtime-verified on AWS) |
+| Audit (append-only + WORM) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (append-only audit written live; WORM Object Lock ships in `infra/cloudformation`, not runtime-validated) |
+| Bedrock + Guardrails | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (Guardrail templates cfn-lint clean; live invocation not asserted in the validation run) |
+| IaC deploy (golden path) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (Agent 01 SAM golden path; agents 02–08 deployable, not individually validated) |
+| Live connectors | ✅ | ✅ | ◻ | ◻ | ◻ | Customer (fixtures + a local live-HTTP reference; Epic/Availity/payer FHIR are engagement work) |
+| CI/CD | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (`.github/workflows/ci.yml`: tests + security + IaC lint; no cloud deploys in CI) / Customer |
+| Monitoring / alerts | ✅ | ◻ | ◻ | ◻ | ◻ | Customer |
+| DR / backup | ✅ | ◻ | ◻ | ◻ | ◻ | Customer |
+| Compliance evidence | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (NIST 800-53 matrix, control mappings) / Customer (HITRUST/SOC 2 evidence) |
+
+Nothing in this repository is production-certified; see `docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md` for the full RACI.
+
+> **Validation update (2026-07-07).** The `hpp-gp01-acc` golden-path acceptance run was independently re-verified (CloudTrail, KMS deletion marker), and the run's Object-Locked WORM audit records are **still inspectable** — S3 Object Lock blocked the bucket's deletion at teardown, so the control demonstrated itself; the bucket is deliberately retained as tamper-proof evidence. Offline suite: 185 tests green. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+
 ---
 
 ## ▶ Start here — what to read first
 1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the
-   144-test suite, then deploy into a new AWS account.
+   185-test suite (as of 2026-07-07), then deploy into a new AWS account.
 2. **`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`** — honest gap assessment + RACI.
 3. **The security package** — `SECURITY.md`, `docs/THREAT-MODEL.md`,
    `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md`,
@@ -86,8 +111,9 @@ check → **human gate** → finalize), every system touch flowing through a den
    (`approvals.py`).
 5. **Tamper-evident audit + WORM** — hash-chained append-only records (`verify_chain`), prod
    conditional writes + IAM deny + S3 Object Lock; **PHI masked, fail-closed** at every boundary.
-6. **Private, in-account inference** — Amazon Bedrock under the AWS BAA via VPC endpoint, with
-   mandatory Guardrails — no PHI egress.
+6. **Private-connectivity inference** — Amazon Bedrock under the AWS BAA via VPC endpoint
+   (AWS PrivateLink), with mandatory Guardrails — no PHI egress to external AI APIs; traffic
+   to the regional, HIPAA-eligible Bedrock service stays on AWS private networking.
 
 Plus the **Care & Claims Orchestration Platform** (`care_platform/`) — a governed saga with
 compensation, an AAL-gated consent ledger (42 CFR Part 2), and a compliance event bus that ties
@@ -96,19 +122,28 @@ agents across a journey **without widening authority** (`ENTERPRISE-PLATFORM.md`
 ---
 
 ## 3. Security architecture & how it satisfies the regulations
+
+![PHI data flow — masking before model and audit, Bedrock under the AWS BAA](docs/diagrams/phi-data-flow.png)
+
+The shared Aegis control-plane pattern — how every tool call is authenticated, authorized, human-approved, and audited, including the deny paths:
+
+![Aegis MCP gateway authorization flow — shared control plane](docs/diagrams/mcp-gateway-auth-flow.png)
+
+Editable source: the SVG in [`docs/diagrams/`](docs/diagrams/) (open in draw.io, Inkscape, or any text editor).
+
 ```
 Workforce/members -> CloudFront + AWS WAF (OWASP rules, rate-limit) + Shield
    -> API Gateway . Amazon Cognito (federates IdP -> short-lived RS256 JWT; gateway verifies it)
    -> Agent runtime (Step Functions + Lambda, or Fargate / AgentCore Runtime) in a private subnet
    -> MCP authorization gateway (re-verifies JWT + custom:hpp_role; deny-by-default; mints a scoped per-call token)
-   -> Amazon Bedrock (Claude) + Guardrails via VPC endpoint            [no PHI egress, under AWS BAA]
+   -> Amazon Bedrock (Claude) + Guardrails via VPC endpoint (PrivateLink)  [no PHI egress to external AI APIs, under AWS BAA]
    -> DynamoDB append-only hash-chained audit . S3 Object Lock (WORM) . KMS CMK
 Cross-cutting: CloudTrail . GuardDuty . Security Hub . Config . PHI masking at every boundary
 ```
 
 | Regime | How it's addressed |
 |---|---|
-| **HIPAA Privacy/Security + AWS BAA** | Minimum-necessary at the gateway; PHI masking (Safe Harbor); hash-chained append-only audit; in-account Bedrock under BAA |
+| **HIPAA Privacy/Security + AWS BAA** | Minimum-necessary at the gateway; PHI masking (Safe Harbor); hash-chained append-only audit; Bedrock via PrivateLink under BAA |
 | **42 CFR Part 2** | Consent check before sensitive disclosure; AAL-gated consent ledger; escalate without consent |
 | **CMS-0057-F** | Da Vinci-aligned payer connector (CRD/DTR/PAS); FHIR PA/status surfaces standardized by Jan 2027 |
 | **No Surprises Act** | Deterministic Good Faith Estimate tool (never the LLM) |
@@ -152,6 +187,8 @@ Terraform), per-agent isolation (own VPC/KMS/Cognito/audit), native (Step Functi
 agent (Patient Access or Member Services), prove value against documented outcomes (§2), and scale on
 a paved road to compliant production. The honest gap assessment (§5) means no surprises in review.
 
+Monthly run-cost model (pilot vs production): [`offerings/TCO-MODEL.md`](offerings/TCO-MODEL.md)
+
 > **For assessors:** the security package maps every claim above to a testable control or a named
 > owner — `SECURITY.md`, `docs/THREAT-MODEL.md`, `docs/NIST-800-53-CONTROL-MATRIX.md`,
 > `docs/OWASP-LLM-ATLAS-MAPPING.md`, `docs/INCIDENT-RESPONSE-AND-KEY-MANAGEMENT.md`.
@@ -173,7 +210,7 @@ a paved road to compliant production. The honest gap assessment (§5) means no s
 **Honest status: a production-shaped accelerator, not an authorized, production-ready system — and it
 doesn't claim to be.** Verifiable today: consequential actions withheld in code + tested · framework-
 enforced human gate · cryptographic JWT verification · bound single-use SoD approvals · hash-chained
-append-only audit + WORM · PHI masking · complete AWS security architecture · no lock-in · a 144-test
+append-only audit + WORM · PHI masking · complete AWS security architecture · no lock-in · a 185-test
 no-API-key suite incl. control-plane negative cases. Still required before go-live: **AWS BAA**, live
 connectors, IdP integration, Guardrail/red-team tuning, CSV/CSA validation, penetration test, DR game
 day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklist:**
@@ -190,7 +227,7 @@ day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklis
 ## Repository map
 ```
 README.md  GETTING-STARTED.md  ENTERPRISE-PLATFORM.md  SECURITY.md  SUITE-STATUS.md  SOURCES.md
-CHANGELOG.md  VERSION  CONTRIBUTING.md  IMPROVEMENTS-OVER-SLG.md  Makefile
+CHANGELOG.md  VERSION  CONTRIBUTING.md  Makefile
 01-..08-*-agent/                       # 8 agents (code, tests, docs, deploy runbook, deck)
 platform_core/hpp_agent_platform/      # gateway, jwt_verify, approvals, audit(+sinks), masker, LLM factory, connectors, A2A
 care_platform/hpp_care_platform/       # govern, canonical, consent, saga, events, journeys (orchestration platform)
@@ -206,7 +243,7 @@ gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds
 ## Quick start
 ```bash
 pip install -e platform_core && pip install langgraph streamlit cryptography
-bash scripts/run_tests.sh                                    # 144 tests, no API key
+bash scripts/run_tests.sh                                    # 185 tests, no API key
 cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py        # fixtures
 EXTRACT_MODE=demo python demo/demo_live.py                                            # LIVE HTTP connector path (no API key)
 cd .. && PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py  # orchestration journeys

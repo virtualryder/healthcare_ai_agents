@@ -9,7 +9,7 @@
 ## Why assess first
 
 An agent that automates a system of record needs an enforcement point between it and that
-system, an IdP that carries role entitlements, in-account inference under a BAA, and live
+system, an IdP that carries role entitlements, private-connectivity inference under a BAA, and live
 connectors to the EHR / clearinghouse / payer systems it reads and writes. The assessment
 inventories all of these before a line of pilot code is committed, so the pilot SOW is priced
 against reality rather than assumptions. The market is moving: >80% of health-system execs
@@ -32,7 +32,7 @@ least-privilege intersection maps cleanly to real people.
 
 **Bedrock and AWS posture.** Whether an AWS BAA is in place; whether Amazon Bedrock is
 enabled in the customer's Region; account structure, networking, and KMS posture for an
-isolated in-VPC, in-account inference deployment with Bedrock Guardrails.
+isolated VPC deployment with private-connectivity inference (Bedrock via PrivateLink) and Bedrock Guardrails.
 
 **HIPAA / BAA and regulatory posture.** HIPAA Privacy/Security + HITECH coverage; 42 CFR
 Part 2 (SUD) handling where relevant; for payers, CMS-0057-F FHIR-API readiness ahead of the

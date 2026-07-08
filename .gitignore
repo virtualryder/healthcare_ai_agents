@@ -22,3 +22,6 @@ dk.json
 delkey.json
 wf-input.json
 packaged.yaml
+cleanup_worm_bucket.ps1
+.aws-sam/
+_qa*/

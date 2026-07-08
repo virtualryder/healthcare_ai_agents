@@ -20,7 +20,7 @@ this file adds the regulatory and AWS references.
 - **NIST AI RMF 1.0** · **NIST SP 800-53 Rev 5** · **OWASP LLM Top 10 (2025)** · **MITRE ATLAS** — see `docs/`.
 
 ## AWS architecture references
-- **Amazon Bedrock** (HIPAA-eligible under AWS BAA) + **Guardrails**; in-account inference via VPC endpoint.
+- **Amazon Bedrock** (HIPAA-eligible under AWS BAA) + **Guardrails**; private-connectivity inference via VPC endpoint (PrivateLink to the regional Bedrock service).
 - **Amazon Bedrock AgentCore** — Gateway, Identity, Runtime (managed equivalents of the reference gateway).
 - **Amazon HealthLake** (FHIR) · **Amazon Comprehend Medical** · **Amazon Bedrock Data Automation**.
 - **Amazon Connect** (contact center) · **AWS Step Functions** (`waitForTaskToken` HITL).

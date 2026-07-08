@@ -43,8 +43,8 @@ four-fifths fairness, accessibility — all run in CI with **no API key**.
 
 ## 5. Deploy story (3 min)
 Show `infra/cloudformation/` (cfn-lint clean, per-agent isolated VPC/KMS/Cognito/audit/gateway),
-`scripts/deploy.sh`, and the `waitForTaskToken` human gate in `aws-native-reference/`. In-account
-Bedrock under the AWS BAA — no PHI egress.
+`scripts/deploy.sh`, and the `waitForTaskToken` human gate in `aws-native-reference/`. HIPAA-eligible
+Bedrock under the AWS BAA, reached via PrivateLink — no PHI egress to external AI APIs.
 
 ## 6. Close (1 min)
 "Land with denials (cleanest CFO ROI), expand across the suite. Every new agent inherits the same

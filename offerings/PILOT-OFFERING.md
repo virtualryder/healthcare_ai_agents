@@ -9,9 +9,9 @@
 ## Objective
 
 Take the agent validated in the POC (default: Agent 01 — Revenue-Cycle & Denial) and stand
-it up in the customer's AWS account as a deployable workload: in-account inference on
-HIPAA-eligible Amazon Bedrock under the customer's AWS BAA (no PHI egress to an external AI
-API), the framework-enforced human-approval gate operating live against real reviewer
+it up in the customer's AWS account as a deployable workload: private-connectivity inference
+on HIPAA-eligible Amazon Bedrock via PrivateLink under the customer's AWS BAA (no PHI egress
+to an external AI API), the framework-enforced human-approval gate operating live against real reviewer
 identities, and a PHI-masked append-only audit trail capturing every consequential step. The
 pilot produces measured KPIs the executive sponsor can take to an investment committee.
 

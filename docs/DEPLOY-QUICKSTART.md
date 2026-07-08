@@ -15,7 +15,8 @@ engagement and is flagged in the go-live checklist.
 
 - **AWS account** with admin (or sufficient) permissions and the AWS CLI configured.
 - **Amazon Bedrock model access** enabled in your Region for the chosen foundation model
-  (in-account inference keeps PHI under the AWS BAA — no external egress).
+  (inference via PrivateLink to HIPAA-eligible Bedrock keeps PHI under the AWS BAA — no
+  egress to external AI APIs).
 - **AWS BAA executed** with AWS before any PHI touches the system. No PHI in fixture mode;
   the BAA must be in place before going live.
 - **KMS** — the security stack provisions a customer-managed CMK; ensure you can create KMS

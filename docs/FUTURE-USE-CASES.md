@@ -10,7 +10,7 @@ each keeps its consequential action with a licensed human.
 For all six: the AWS building blocks are the same accelerator core — Cognito/IdP for identity,
 the MCP authorization gateway for least-privilege tool access, Step Functions (`waitForTaskToken`)
 or Fargate for the runtime and human gate, DynamoDB + S3 Object Lock for the append-only WORM
-audit, KMS for keys, and Amazon Bedrock + Guardrails (via VPC endpoint, no PHI egress) for
+audit, KMS for keys, and Amazon Bedrock + Guardrails (via VPC endpoint/PrivateLink, no PHI egress to external AI APIs) for
 inference. Below, "AWS blocks" highlights anything **additional**.
 
 ---

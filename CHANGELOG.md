@@ -16,7 +16,7 @@ All notable changes to the HPP AI Agent Suite. Pre-1.0 reference accelerator; on
   record, AAL-gated consent ledger (42 CFR Part 2), durable saga with compensation, compliance
   event bus, three cross-agent journeys + `aws-native-reference/care-platform/` runner. 7 tests.
 - **CI** (`.github/workflows/ci.yml`): tests + security + IaC lint. `CHANGELOG.md`, `VERSION`,
-  root `SOURCES.md`, `IMPROVEMENTS-OVER-SLG.md`.
+  root `SOURCES.md`.
 - **GTM/decks:** AWS brand mark on every deck; platform deck; leave-behind one-pagers; SA field
   guide; per-agent deployment handbooks (planned in this pass).
 

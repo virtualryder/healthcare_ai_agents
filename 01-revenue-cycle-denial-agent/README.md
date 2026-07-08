@@ -46,7 +46,7 @@ PYTHONPATH=../platform_core:..:.  python -m pytest tests -q
 
 ## Live mode (Bedrock + real connectors)
 
-Set `EXTRACT_MODE=live`, `LLM_PROVIDER=bedrock` (in-account inference under the AWS BAA;
+Set `EXTRACT_MODE=live`, `LLM_PROVIDER=bedrock` (inference via PrivateLink under the AWS BAA;
 configure `BEDROCK_GUARDRAIL_ID`), and point `PAS_BASE_URL` / `CLEARINGHOUSE_BASE_URL` /
 `PAYER_BASE_URL` / `EHR_BASE_URL` at the organization's systems. No agent code changes —
 the gateway and connector signatures are identical to demo. See `.env.example` and

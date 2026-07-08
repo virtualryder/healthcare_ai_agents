@@ -7,7 +7,7 @@ PHI.**
 | Template | Purpose |
 |---|---|
 | `quickstart.yaml` | Master — nests the stacks; `GatewayMode` + `DeployMode` switch variants |
-| `network.yaml` | Per-agent VPC, private subnets, NAT, **Bedrock VPC interface endpoint** (no PHI egress), S3 endpoint, Flow Logs |
+| `network.yaml` | Per-agent VPC, private subnets, NAT, **Bedrock VPC interface endpoint** (PrivateLink; no PHI egress to external AI APIs), S3 endpoint, Flow Logs |
 | `security.yaml` | KMS CMK, **Bedrock Guardrail** (PHI block/anonymize + unauthorized-determination denied topic), Cognito pool+client carrying `custom:hpp_role`, least-privilege agent role |
 | `data.yaml` | Append-only DynamoDB audit (PITR, KMS), HITL table, **S3 Object Lock COMPLIANCE (WORM, 7-yr default)** |
 | `connectors.yaml` | One governed connector dispatcher Lambda — the only thing that talks to a system of record |

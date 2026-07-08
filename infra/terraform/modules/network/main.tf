@@ -1,5 +1,6 @@
-# HPP — Network module. Per-agent isolated VPC with private subnets, NAT, an
-# in-account Bedrock interface endpoint (no PHI egress), an S3 gateway endpoint,
+# HPP — Network module. Per-agent isolated VPC with private subnets, NAT, a
+# Bedrock VPC interface endpoint (PrivateLink to the regional Bedrock service;
+# no PHI egress to external AI APIs), an S3 gateway endpoint,
 # and VPC Flow Logs. Terraform parity for infra/cloudformation/network.yaml.
 
 variable "agent_id" { type = string }

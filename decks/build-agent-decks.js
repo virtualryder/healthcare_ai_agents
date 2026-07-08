@@ -192,7 +192,7 @@ function buildExec(){
     "No agent submits a claim or issues a coverage determination autonomously. AI assists; a licensed human decides.",
     ["Deny-by-default MCP gateway — an agent can never exceed the human (agent grant ∩ user entitlement).",
      "Framework-enforced human gate on every high-risk write; PHI-masked append-only audit.",
-     "In-account Amazon Bedrock under the AWS BAA — no PHI egress; Guardrails on every call.",
+     "HIPAA-eligible Amazon Bedrock under the AWS BAA, reached via PrivateLink — no PHI egress to external AI APIs; Guardrails on every call.",
      "Governance spine in CI: grounding, prompt registry, red team, four-fifths fairness, accessibility."],
     ["Land with denials (cleanest CFO ROI)","Expand 02+04, then payer 05+08","Each agent reuses the platform",
      "Marginal compliance cost falls per agent","Demonstrated + Deployable-by-design today"],

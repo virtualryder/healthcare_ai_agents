@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Clean-account ACCEPTANCE TEST for the HPP golden path. Run against a freshly deployed stack;
 # it proves the deployed system ENFORCES the controls (not just models them) and exits non-zero
-# on any failure. Sequence (REMEDIATION-PLAN.md §4):
+# on any failure. Sequence:
 #   network isolation -> read ALLOW -> write PENDING -> approval-bypass BLOCKED ->
 #   self-approval BLOCKED -> two-person approval ALLOW once -> replay BLOCKED -> tampered-args
 #   BLOCKED -> withheld tool DENY -> async workflow approve+finalize -> durable audit present.

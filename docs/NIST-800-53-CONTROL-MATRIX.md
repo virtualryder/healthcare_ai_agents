@@ -18,7 +18,7 @@ owns the residual. Status: **Implemented** (in this repo) · **Configurable** (c
 | **IA-2/IA-5 Identification & Auth** | RS256/JWKS verification; alg-confusion guard; no trusted client roles | `jwt_verify.py`; test_security_controls | Implemented |
 | **IA-8 Non-org users (members)** | Member identity verified before disclosure (agents 04/08) | `identity.verify_member` | Implemented |
 | **SC-7 Boundary Protection** | CloudFront+WAF+Shield edge; private subnets; VPC endpoints | `infra/`, THREAT-MODEL | Configurable |
-| **SC-8 Transmission Confidentiality** | TLS in transit; in-account Bedrock via VPC endpoint (no PHI egress) | `network.yaml`, `llm_factory.py` | Configurable |
+| **SC-8 Transmission Confidentiality** | TLS in transit; Bedrock via VPC endpoint/PrivateLink (no PHI egress to external AI APIs) | `network.yaml`, `llm_factory.py` | Configurable |
 | **SC-12/SC-13 Key Mgmt / Crypto** | KMS CMK per environment; signing keys via Secrets Manager | `security.yaml`, `secrets.py`, IR-KM doc | Configurable |
 | **SC-28 Protection at Rest** | KMS-encrypted DynamoDB + S3; Object Lock WORM | `data.yaml` | Configurable |
 | **SI-4 System Monitoring** | CloudTrail/GuardDuty/Security Hub/Config (customer); structured PHI-masked traces | `tracing.py`, runbooks | Configurable |

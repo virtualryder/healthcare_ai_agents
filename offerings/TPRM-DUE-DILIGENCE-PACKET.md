@@ -9,15 +9,17 @@
 ## A. Deployment model and data residency
 
 The suite is deployed **in the customer's AWS account and Region**, not in an SI-hosted
-multi-tenant environment. Inference runs in-account on HIPAA-eligible Amazon Bedrock under the
-customer's AWS BAA with `LLM_PROVIDER=bedrock`. There is **no PHI egress to an external AI
-API**. Each agent is deployed into its own isolated VPC (CloudFormation CIDRs 10.30–10.37),
-with an in-account Bedrock endpoint over PrivateLink and VPC Flow Logs.
+multi-tenant environment. Inference runs on HIPAA-eligible Amazon Bedrock — a regional AWS
+service reached over AWS PrivateLink — under the customer's AWS BAA with
+`LLM_PROVIDER=bedrock`. There is **no PHI egress to an external AI API**; traffic to Bedrock
+stays on AWS private networking. Each agent is deployed into its own isolated VPC
+(CloudFormation CIDRs 10.30–10.37), with a Bedrock VPC interface endpoint (PrivateLink) and
+VPC Flow Logs.
 
 ## B. Data flows
 
 For a representative agent (Agent 01): a denial record is pulled from the source system via a
-governed connector; the agent assembles context and calls in-account Bedrock (with Guardrails)
+governed connector; the agent assembles context and calls Bedrock via PrivateLink (with Guardrails)
 to triage and draft a grounded appeal; the draft is queued to the human-review gate; a verified
 reviewer (`BILLER` / denials specialist) approves; the consequential action (claim/appeal
 submission) is performed by the **human**, not the agent. Every step is written to the
@@ -36,7 +38,7 @@ not enter logs.
 
 ## D. BAA and regulatory posture
 
-An AWS BAA covers the in-account Bedrock, HealthLake, and supporting services. The suite is
+An AWS BAA covers Bedrock, HealthLake, and the supporting HIPAA-eligible services. The suite is
 designed against HIPAA Privacy/Security Rules + HITECH, 42 CFR Part 2 (SUD), CMS-0057-F `[gov]`,
 No Surprises Act `[gov]`, ACA Section 1557 `[gov]`, 21st Century Cures info-blocking, and CMS
 expectations for AI in utilization management. Each control is mapped regime→control→AWS service
@@ -108,7 +110,7 @@ production configuration.
 
 The accelerator is **not** itself a SOC 2- or HITRUST-certified product, and we do not claim it
 is. It is a *Demonstrated + Deployable-by-design* accelerator whose controls are built and
-tested (121 automated tests, no API key) and mapped to recognized regimes. Achieving the
+tested (185 automated tests as of 2026-07-07, no API key) and mapped to recognized regimes. Achieving the
 customer's certification scope — customer computer-system validation (CSV/CSA), live-connector
 validation, penetration test, and a HITRUST/SOC 2 assessment of the deployed system — is part of
 the production engagement, not a day-one deliverable. We will not overstate this; the maturity

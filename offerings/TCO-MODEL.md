@@ -54,6 +54,59 @@ drivers are:
 > Bedrock Guardrails are the swing factors; the isolation baseline (VPC endpoint, KMS,
 > CloudWatch) is largely fixed and is amortized across agents as the portfolio grows.
 
+## Numeric estimate — Pilot vs Production (illustrative)
+
+> **MODEL ASSUMPTION — illustrative estimate** built from published us-east-1 on-demand list
+> prices as of mid-2026; prices and token economics change frequently; validate with the AWS
+> Pricing Calculator and your AWS account team before quoting. **Bedrock token volume is the
+> dominant, workload-dependent variable** — every Bedrock line below is the sensitivity driver.
+> No figure here is a quote.
+
+The narrative structure above stays authoritative for *what* drives cost; this table puts
+concrete monthly dollars against it for two reference scenarios.
+
+**Scenario assumptions:**
+
+| Assumption | **Pilot** (1 agent, dept-scale) | **Production** (8-agent suite) |
+|---|---|---|
+| Governed requests/month | ~10,000 (e.g., Agent 01 denial triage for one facility) | ~400,000 (payer/provider back-office volumes are transaction-, not chat-, shaped) |
+| Active users (MAU) | ~50 staff | ~2,000 staff |
+| Bedrock tokens/month | ~5M input + ~1M output | ~250M input + ~50M output |
+| Model class | Mid-tier Claude (Sonnet-class): ~$3.00/M input, ~$15.00/M output tokens `[MODEL ASSUMPTION]` | same |
+| Architecture | Serverless reference path (API Gateway HTTP API → Lambda → Step Functions `waitForTaskToken` HITL → Bedrock under BAA), private-by-default (VPC interface endpoints even in pilot) | same, plus production hardening (NAT, WAF, CloudFront) |
+| Per-request shape | ~2 API calls, ~5 Lambda invocations, ~15 Step Functions state transitions, ~10 DynamoDB writes + 20 reads (audit + HITL state) | same |
+
+| Line item | Basis | **Pilot ($/mo)** | **Production ($/mo)** |
+|---|---|---:|---:|
+| **Bedrock inference** ← *sensitivity driver* | Sonnet-class; 5M in + 1M out (pilot) / 250M in + 50M out (prod) | **30** | **1,500** |
+| Bedrock Guardrails ← *scales with request volume* | Content filters, prompt-side; ~2 text units/request @ ~$0.75/1K units | 15 | 600 |
+| Lambda (connectors + framework) | ~5 invocations/request; 512 MB × ~800 ms | 1 | 14 |
+| API Gateway (HTTP API) | ~2 calls/request @ ~$1.00/M | 1 | 1 |
+| Step Functions (Standard) | ~15 state transitions/request (HITL path) @ ~$25/M | 4 | 150 |
+| DynamoDB (on-demand) | ~10 WRU + 20 RRU/request (append-only audit + HITL) + storage | 1 | 10 |
+| S3 + Object Lock (WORM audit) | 5 GB pilot / 200 GB prod, grows with retention | 2 | 7 |
+| KMS | $1/CMK (4 pilot / 6 prod) + ~20 requests/request @ $0.03/10K | 5 | 30 |
+| Cognito | MAU-based (~$0.015/MAU); 50 pilot / 2,000 prod | 1 | 30 |
+| CloudWatch | Logs ingest + metrics + dashboards | 3 | 50 |
+| VPC interface endpoints | ~$7.30/endpoint-mo + data; 5 pilot / 8 prod (Bedrock PrivateLink, KMS, STS, Logs…) | 36 | 68 |
+| NAT Gateway | Prod only; ~$33/mo + ~100 GB processed | — | 37 |
+| WAF | Prod only; web ACL + 5 rules + request fees | — | 10 |
+| CloudFront | Prod only; member/patient web channel, low-GB tier | — | 10 |
+| **TOTAL** | | **~$99/mo** | **~$2,517/mo** |
+
+**Sensitivity (one line):** 2× Bedrock token volume ≈ **+$1,500/mo** at production scale
+(inference is ~60% of the production total); every other line moves slowly.
+
+Not priced above (add per customer usage): **HealthLake** (stored GB + FHIR requests), **Bedrock
+Data Automation** (per page/document), **Amazon Connect** (per-minute, Agents 04/08) — these are
+real for the agents that use them and can each add hundreds per month at volume. Rounding: whole
+dollars; sub-dollar lines shown as $1. Annualized production (excl. HealthLake/BDA/Connect):
+~$30.2K/yr.
+
+**What's NOT included:** personnel (reviewers, platform ops), ProServe/SI delivery fees, data
+egress at scale, AWS enterprise support plan, non-prod environments (dev/test/staging — commonly
++30–60% of the prod infra baseline, minimal Bedrock in demo mode).
+
 ## Multi-agent scaling
 
 A second agent reuses the shared `platform_core` control plane (gateway, PHI masker, audit,

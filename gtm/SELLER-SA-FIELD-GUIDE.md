@@ -2,8 +2,8 @@
 
 A phase-by-phase playbook for the seller and the partner/AWS Solutions Architect taking the
 **HPP AI Agent Suite ("HCOS")** from a first conversation to a production agent. The suite is
-honest about its maturity: it is **Demonstrated and Deployable-by-design** today (144 tests pass
-with no API key — 8 agents + governance + platform_core security + care_platform), and
+honest about its maturity: it is **Demonstrated and Deployable-by-design** today (185 tests as of
+2026-07-07, no API key — 8 agents + governance + platform_core security + care_platform + golden path), and
 production-readiness (CSV/CSA validation, IdP federation, live connectors, penetration test,
 HITRUST/SOC 2) is the **engagement**. An executed **AWS BAA** precedes any PHI. Cite all external
 numbers from `gtm/HPP-DECK-SOURCES.md` / `SOURCES.md`; never invent competing figures.
@@ -140,8 +140,8 @@ tested, not just this analog.)
    writes + IAM Update/Delete deny + S3 Object Lock COMPLIANCE.
    *Evidence:* `SECURITY.md` §5; `THREAT-MODEL.md` T7; `NIST...` AU-9/AU-10; `mcp_gateway/audit.py`,
    `audit_sinks.py`, `infra/cloudformation/data.yaml`.
-5. **PHI masking + in-account Bedrock under BAA** — fail-closed Safe-Harbor masking at every
-   audit/trace boundary; Bedrock via VPC endpoint, no PHI egress.
+5. **PHI masking + Bedrock via PrivateLink under BAA** — fail-closed Safe-Harbor masking at every
+   audit/trace boundary; Bedrock via VPC endpoint, no PHI egress to external AI APIs.
    *Evidence:* `SECURITY.md` §6–7; `THREAT-MODEL.md` T8; `OWASP...` LLM02; `phi.py`,
    `llm_factory.py`, `tracing.py`.
 6. **Bedrock Guardrails** — PHI filters + unauthorized-determination denied topic on input and
