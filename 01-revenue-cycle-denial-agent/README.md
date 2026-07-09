@@ -1,6 +1,8 @@
 # Agent 01 — Revenue-Cycle & Denial Management
 ### Flagship reference agent · HPP AI Agent Suite (Health Providers & Plans)
 
+> 🛡️ **Reviewer & pilot pack (hero agent — the only clean-account-gated HPP agent):** [`ASSURANCE-PACKET.md`](ASSURANCE-PACKET.md) (architecture, controls, evidence, negative results, RACI) · [`PILOT-SOW.md`](PILOT-SOW.md) (scoped 6–10 week pilot) · **what the platform refuses:** `make neg-demo` → [`demo/negative_demo.py`](demo/negative_demo.py) proves **10/10** deny cases (CI-gated). Connector: documented X12 835 scaffold (tier-1); production 835/Epic is engagement work under a BAA — [`../docs/CONNECTOR-MATURITY.md`](../docs/CONNECTOR-MATURITY.md).
+
 > Reviews claims before submission, identifies missing documentation, determines the
 > likely denial root cause, drafts a grounded appeal, tracks the payer response, and
 > updates the case-management system — **without ever submitting a claim** (a biller

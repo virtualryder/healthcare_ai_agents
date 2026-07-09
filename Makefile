@@ -1,5 +1,5 @@
 # HPP AI Agent Suite — common tasks. `make help` lists targets.
-.PHONY: help install test demo evals eval-denial lint-cfn decks roi clean
+.PHONY: help install test demo evals eval-denial neg-demo lint-cfn decks roi clean
 AGENT ?= 01-revenue-cycle-denial
 
 help:
@@ -10,6 +10,10 @@ install: ## Install platform_core (editable) + agent deps
 
 test: ## Run the full test suite (no API key), per-agent isolation
 	bash scripts/run_tests.sh
+
+neg-demo: ## The 10 things the platform REFUSES (Agent 01 Revenue-Cycle Denials) + CI gate
+	PYTHONPATH=platform_core:. python 01-revenue-cycle-denial-agent/demo/negative_demo.py
+	PYTHONPATH=platform_core:. python -m pytest governance/tests/test_negative_demo.py platform_core/tests/test_budget.py -q
 
 demo: ## Run a deterministic agent demo (AGENT=0N-name), no API key
 	cd $(AGENT)-agent && EXTRACT_MODE=demo python demo/demo_run.py
