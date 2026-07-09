@@ -1,0 +1,50 @@
+# MATURITY.yaml — machine-readable single source of truth for this repo's maturity claims.
+# Prose should agree with this file; THIS FILE governs on drift. Test count via scripts/run_tests.sh.
+# Taxonomy: docs/CONNECTOR-MATURITY.md · Boundaries: NOT-CLAIMS.md
+schema_version: 1
+repo: healthcare_ai_agents
+display_name: Healthcare Payer/Provider AI Agents (HPP)
+governance_pattern: "Aegis Governance Pattern (AGP) v1.0"
+positioning: reference-accelerator
+updated: 2026-07-09
+
+tests:
+  offline_total: 185                          # 177 passed + 8 skipped without langgraph (2026-07-07)
+  reproduce: "make test   # scripts/run_tests.sh — per-agent isolation, no API key"
+  last_verified: 2026-07-07
+
+clean_account_deploy:
+  status: hero-only                           # IMPORTANT: do NOT pitch 02-08 as equally validated
+  detail: "Only Agent 01 (Revenue-Cycle Denials) has clean-account acceptance evidence. Agents 02-08
+           share the same templates/pattern but are NOT individually clean-account-gated yet."
+  evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
+
+hero_agent: 01-revenue-cycle-denial
+maturity_scale: [documented, demonstrated, deployable, deploy-validated, production-ready]
+
+agents:
+  - id: 01-revenue-cycle-denial
+    name: Revenue-Cycle Denials & Appeals
+    hero: true
+    maturity: deploy-validated                # the only clean-account-gated HPP agent
+    clean_account_evidence: true
+    scored_eval: true                         # governance/evals/score_denial (recoverable-recall, PHI-leak=0)
+    connectors:
+      - {kind: denials, source: "documented X12 835 / HealthLake scaffold", tier: "1-fixture+scaffold", note: "no clean public denial API"}
+      - {kind: denials, source: "payer/clearinghouse 835 feed, Epic/ADT (customer)", tier: 4-not-done, note: "under BAA"}
+  - {id: 02-prior-authorization, name: Prior Authorization, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+  - {id: 03-clinical-administration, name: Clinical Administration, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+  - {id: 04-patient-access, name: Patient Access, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+  - {id: 05-utilization-management, name: Utilization Management, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+  - {id: 06-payment-integrity-coding, name: Payment Integrity & Coding, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+  - {id: 07-care-management-pophealth, name: Care Management / Pop Health, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+  - {id: 08-contact-center-member-services, name: Contact Center / Member Services, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
+
+pitch_guidance: "Lead ONLY with Agent 01 until 02-08 pass the same clean-account gate."
+
+references:
+  readme: README.md
+  suite_status: SUITE-STATUS.md
+  connector_taxonomy: docs/CONNECTOR-MATURITY.md
+  not_claims: NOT-CLAIMS.md
+  clean_account_evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
