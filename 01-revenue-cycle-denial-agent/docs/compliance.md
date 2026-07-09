@@ -8,7 +8,7 @@ on. Full regime→control→AWS mapping: `../../governance/controls/control_mapp
 |---|---|
 | **HIPAA Privacy — minimum necessary** (45 CFR 164.502(b)) | Every system call passes the deny-by-default gateway with a tool-scoped token; the agent reads only the claim, account, docs, and policy it needs. |
 | **HIPAA Security — audit controls** (45 CFR 164.312(b)) | Every ALLOW/DENY/PENDING/ERROR is recorded in the append-only, PHI-masked audit log with lineage to the system reached and the approving reviewer. |
-| **HIPAA / AWS BAA** | In `LLM_PROVIDER=bedrock`, inference runs in-account on HIPAA-eligible Amazon Bedrock — no PHI leaves the customer VPC to an external AI API. |
+| **HIPAA / AWS BAA** | In `LLM_PROVIDER=bedrock`, inference runs on HIPAA-eligible Amazon Bedrock, reached from the customer VPC over AWS PrivateLink (a regional AWS service, not in-VPC hosting) — no PHI egress to an external AI API. HIPAA-eligible ≠ HIPAA-compliant; a signed AWS BAA and customer controls are required. |
 | **No raw PHI in logs/traces** | The PHI masker (HIPAA Safe Harbor identifiers) runs at every audit/trace boundary; appeal text is PHI-checked in `compliance_check`. |
 | **No autonomous consequential action** | `human_review_gate` is framework-enforced (LangGraph `interrupt_before`); `payer.submit_appeal` and `pas.update_case` are high-risk and require a verified reviewer. The agent is **not granted** `clearinghouse.submit_claim`. |
 | **Accurate payer communication** | Grounding verification fails the appeal if any code, amount, date, or policy name is not traceable to the claim or approved coverage policy. |

@@ -56,8 +56,8 @@ the model.
 - *"AI can't be allowed to deny care."* — Correct, and it can't: `payer.issue_determination`
   is withheld from every agent; an adverse recommendation is forwarded to a medical director,
   never auto-denied.
-- *"PHI can't leave our walls."* — With `LLM_PROVIDER=bedrock`, inference runs in-account on
-  HIPAA-eligible Bedrock under your BAA; the PHI masker runs at every audit/trace boundary.
+- *"PHI can't leave our walls."* — With `LLM_PROVIDER=bedrock`, inference runs on HIPAA-eligible Bedrock reached
+  over AWS PrivateLink (a regional AWS service, not in-VPC hosting) under your BAA; the PHI masker runs at every audit/trace boundary.
 - *"Hallucination is a non-starter in healthcare."* — Outputs are grounded and verified, prompts
   are hash-pinned, Guardrails filter, and a human reviews every consequential output before it acts.
 - *"Who is accountable?"* — A licensed/credentialed human decides every consequential action;

@@ -33,7 +33,7 @@ drivers are:
   denied claims/yr ≈ ~11,800/month entering the agent.
 - Per-transaction inference: denial triage + grounded appeal draft ≈ one moderate Bedrock
   call (assume ~6K input + ~2K output tokens) plus guardrail evaluation.
-- `LLM_PROVIDER=bedrock`, in-account, under the customer's AWS BAA — no external AI API egress.
+- `LLM_PROVIDER=bedrock`, reached over AWS PrivateLink under the customer's AWS BAA — no external AI API egress.
 - Native Step Functions deploy with `waitForTaskToken` HITL (not a long-running container).
 - Single Region; one isolated VPC per agent; WORM retention per the customer's record policy.
 

@@ -12,7 +12,11 @@ def _agent_prompt_texts():
     texts = []
     for prompts_py in sorted(_REPO.glob("0*-*-agent/agent/prompts.py")):
         ns = {}
-        exec(compile(prompts_py.read_text(), str(prompts_py), "exec"), ns)
+        # encoding="utf-8" is required: prompts contain non-ASCII (em-dashes). Without it,
+        # Path.read_text() uses the platform default (cp1252 on Windows) and mis-hashes the
+        # prompt vs the utf-8-pinned manifest, so the test would pass on Linux CI but fail on
+        # Windows. Pin the encoding so the hash is identical on every platform.
+        exec(compile(prompts_py.read_text(encoding="utf-8"), str(prompts_py), "exec"), ns)
         for name, val in ns.items():
             if name.endswith("_PROMPT") and isinstance(val, str):
                 texts.append((prompts_py.parent.parent.name, name, val))
