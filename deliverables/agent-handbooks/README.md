@@ -6,7 +6,7 @@ systems/connectors and their X12/FHIR standards, the workforce roles to map in t
 withheld authority (what the agent never does), a step-by-step `scripts/deploy.sh` deploy with the
 agent's VPC CIDR, a human-gate smoke test, the key regulations, and a go-live checklist.
 
-**Maturity stance (every agent):** Demonstrated + Deployable-by-design today (258 tests as of
+**Maturity stance (every agent):** Demonstrated + Deployable-by-design today (263 tests as of
 2026-07-10, no API key). Production-readiness — CSV/CSA validation, IdP federation, live connectors,
 penetration test, HITRUST/SOC 2 — is the **engagement**. An executed **AWS BAA precedes any PHI**;
 until then the suite runs in **fixture mode**.

@@ -11,7 +11,7 @@ and the release packet ([`RELEASE-PACKET.md`](RELEASE-PACKET.md)).*
 |---|---|---|
 | **Bandit** (SAST) | **BLOCKING** | vs committed `.bandit-baseline.json` — a NEW medium+ finding fails CI; baselined findings don't |
 | **detect-secrets** | **BLOCKING** | vs committed `.secrets.baseline` — a NEW unbaselined secret fails CI |
-| **pip-audit** (deps) | report-only | flips to blocking once deps are hash-pinned in `platform_core/requirements-lock.txt` |
+| **pip-audit** (deps) | **BLOCKING** | deps pinned in `requirements-lock.txt` + `requirements-dev.txt`; `\|\| true` dropped, so a known-vulnerable dependency fails CI |
 | **Semgrep** (SAST rulesets) | report-only | flips to blocking once a ruleset (e.g. `p/ci`) is pinned + triaged |
 | **Checkov** (IaC) | soft-fail | pre-existing reference-template findings surfaced, not blocking (harden templates, then remove `--soft-fail`) |
 | **CycloneDX SBOM** | artifact | published every run |
@@ -29,14 +29,14 @@ supply-chain job in `ci.yml` (gitleaks, Trivy, Terraform validate) — `security
 |---|---|
 | **Bandit** | `bandit -r . --severity-level medium --confidence-level medium --skip B101 -f json -o .bandit-baseline.json`, commit the baseline, then run with `-b .bandit-baseline.json` and drop `|| true`. New medium+ findings then fail CI; baselined ones don't. |
 | **detect-secrets** | `detect-secrets scan > .secrets.baseline`, **audit** it (`detect-secrets audit .secrets.baseline`) to mark the known false positives (`.env.example` placeholders, prompt SHA hashes), commit it, then run `--baseline .secrets.baseline` and drop `|| true`. |
-| **pip-audit** | Pin dependencies with hashes into `platform_core/requirements-lock.txt` (`pip-compile --generate-hashes`), then drop `|| true` so a known-vulnerable dependency fails CI. |
 | **Semgrep** | Pin a ruleset (e.g. `p/ci`, `p/python`), triage, then drop `|| true`. |
 | **Checkov** | Harden the reference templates, then remove `--soft-fail` to enforce on IaC misconfigurations. |
 
 ## Dependency lockfiles
 
-Add `platform_core/requirements-lock.txt` (hash-pinned) so pip-audit and the SBOM run against exact,
-reproducible versions. Until then the harness falls back to the unpinned `requirements.txt` (advisory).
+`requirements-lock.txt` (runtime) and `requirements-dev.txt` (tooling) are committed and pinned, so
+pip-audit and the SBOM run against exact, reproducible versions. pip-audit is now **blocking** — a
+known-vulnerable pinned dependency fails CI (the `|| true` fallback has been removed).
 
 ## Where the evidence goes
 

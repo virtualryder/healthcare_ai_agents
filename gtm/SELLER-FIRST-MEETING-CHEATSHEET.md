@@ -14,7 +14,7 @@ consequential action."
   stays in-account on HIPAA-eligible Bedrock under your BAA."
 
 ## Three proof points (no API key)
-1. 258 automated tests pass (as of 2026-07-10), including red-team injection/PHI-exfil/authz-bypass.
+1. 263 automated tests pass (as of 2026-07-10), including red-team injection/PHI-exfil/authz-bypass.
 2. Withheld authorities are enforced in code: a test proves the agent can't issue a UM determination.
 3. CloudFormation + Terraform, per-agent isolated VPC/KMS/audit, deployable in a new account.
 

@@ -72,7 +72,7 @@ account — and run across your systems, not just one EHR. You keep the control 
 Agreed — which is why we are explicit that production-readiness (customer computer-system
 validation CSV/CSA, live-connector validation, penetration test, HITRUST) is the **engagement**,
 not a day-one claim. The accelerator gives validation a head start: governance is built and
-tested (185 automated tests as of 2026-07-07, no API key), controls are mapped regime→control→AWS service, and
+tested (263 automated tests as of 2026-07-10, no API key), controls are mapped regime→control→AWS service, and
 the human gate and audit trail are the evidence surfaces a validation effort needs.
 
 ## 10. "Couldn't we just build this ourselves?"

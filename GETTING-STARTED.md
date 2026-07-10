@@ -23,11 +23,18 @@ cd ..
 Each of the eight agents has the same `demo/demo_run.py` and `app.py`. Swap `01-…` for any of
 `02-…` through `08-…`.
 
+> **LLM provider.** These demos are deterministic (fixtures, no model call). When a live model *is*
+> invoked, the provider **defaults to in-account Amazon Bedrock** (`LLM_PROVIDER=bedrock`, under the
+> AWS BAA, with Guardrails). The external Anthropic API is gated behind an explicit
+> `ALLOW_EXTERNAL_LLM=1` opt-in (non-PHI/dev only), so a bare `LLM_PROVIDER` change cannot silently
+> egress PHI off AWS. Agents 01–02 carry the real LLM path; agents 03–08 are deterministic reference
+> workflows.
+
 ## Step 2 — Run the full test suite (no API key)
 
 ```bash
 bash scripts/run_tests.sh
-# → platform + governance, then each agent in isolation → "ALL SUITES PASSED" (185 tests as of 2026-07-07)
+# → platform + governance, then each agent in isolation → "ALL SUITES PASSED" (263 tests as of 2026-07-10)
 ```
 
 This proves the governance controls — deny-by-default authorization, the human gate, PHI

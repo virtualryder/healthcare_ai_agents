@@ -4,9 +4,11 @@ Provider-abstracted LLM factory for the HPP agent suite.
 One factory, two providers, two model tiers:
 
     PROVIDERS (env: LLM_PROVIDER)
-      anthropic  (default)  ChatAnthropic via the Anthropic API.
-      bedrock               ChatBedrockConverse via a VPC interface endpoint —
+      bedrock  (default)    ChatBedrockConverse via a VPC interface endpoint —
                             inference stays inside the organization's AWS account
+      anthropic             ChatAnthropic via the EXTERNAL Anthropic API. Sends prompt
+                            content off-AWS, so it is gated behind ALLOW_EXTERNAL_LLM=1
+                            (non-PHI / dev only); otherwise get_llm raises.
                             under an AWS BAA. THIS is the configuration that makes
                             the PHI-residency story true (no patient data egress to
                             an external AI API) and the tier Amazon Bedrock
@@ -29,7 +31,8 @@ infra/terraform/modules/security) and reference the ID here.
 Ref: https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html
 
 Env reference:
-    LLM_PROVIDER                anthropic | bedrock      (default anthropic)
+    LLM_PROVIDER                bedrock | anthropic      (default bedrock; anthropic requires ALLOW_EXTERNAL_LLM=1)
+    ALLOW_EXTERNAL_LLM          opt-in (1/true) to permit the external Anthropic API (non-PHI/dev only)
     ANTHROPIC_API_KEY           required for anthropic provider
     CLAUDE_NARRATIVE_MODEL      default claude-sonnet-4-6
     CLAUDE_FAST_MODEL           default claude-haiku-4-5
@@ -62,7 +65,10 @@ BEDROCK_MODELS = {
 
 
 def provider() -> str:
-    return os.getenv("LLM_PROVIDER", "anthropic").strip().lower()
+    # Default to bedrock: in-account inference reached over PrivateLink under the AWS
+    # BAA. The external Anthropic API must be chosen explicitly AND opted into (see
+    # get_llm), so a PHI workload never silently egresses to a non-AWS API by default.
+    return os.getenv("LLM_PROVIDER", "bedrock").strip().lower()
 
 
 def get_llm(role: Role = "narrative", temperature: float = 0.0, max_tokens: int = 4096) -> Any:
@@ -106,6 +112,17 @@ def get_llm(role: Role = "narrative", temperature: float = 0.0, max_tokens: int 
             )
         return ChatBedrockConverse(**kwargs)
 
+    # External Anthropic API path. This sends prompt content OFF-AWS to a non-AWS AI
+    # API, which contradicts the "PHI stays in-account / no external AI egress" posture.
+    # It is therefore gated behind an explicit opt-in so it can never be reached by a
+    # bare LLM_PROVIDER flip on a PHI workload.
+    if os.getenv("ALLOW_EXTERNAL_LLM", "").strip().lower() not in ("1", "true", "yes"):
+        raise RuntimeError(
+            "LLM_PROVIDER=anthropic uses the EXTERNAL Anthropic API and sends prompt "
+            "content off-AWS — contradicting the in-account/PrivateLink-under-BAA posture. "
+            "Use LLM_PROVIDER=bedrock (the default), or set ALLOW_EXTERNAL_LLM=1 to "
+            "explicitly accept external egress (non-PHI / dev use only)."
+        )
     from langchain_anthropic import ChatAnthropic
 
     return ChatAnthropic(

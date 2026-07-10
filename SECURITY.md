@@ -38,14 +38,16 @@ reports. Include affected file/commit, reproduction, and impact. Target: acknowl
 3. **Bound human approval** — single-use, separation-of-duties, tamper-evident approval tokens
    cryptographically bound to the exact tool + arguments (`approvals.py`).
 4. **Scoped, short-lived tokens** — per-call, tool-scoped, expiring (`mcp_gateway/tokens.py`).
-5. **Append-only, hash-chained audit + WORM** — chained records + (prod) conditional `PutItem`
-   writes, IAM scoping `UpdateItem` to the atomic `__seq__` counter only and explicitly denying
-   `DeleteItem`, plus S3 Object Lock (`mcp_gateway/audit.py`, `audit_sinks.py`, and the enforced
-   IAM in `infra/golden-path-01-revenue-cycle/template.yaml`).
+5. **Append-only, hash-chained audit + WORM** — chained records sealed with a **dedicated
+   `AUDIT_SIGNING_SECRET`, split from the approval `APPROVAL_SIGNING_SECRET`** (an approval-key
+   compromise cannot forge audit entries), + (prod) conditional `PutItem` writes, IAM scoping
+   `UpdateItem` to the atomic `__seq__` counter only and explicitly denying `DeleteItem`, plus S3
+   Object Lock (`mcp_gateway/audit.py`, `audit_sinks.py`, and the enforced IAM in
+   `infra/golden-path-01-revenue-cycle/template.yaml`).
 6. **Fail-closed PHI masking** (`phi.py`, HIPAA Safe Harbor identifiers; deterministic by default,
    with optional HIPAA-eligible Amazon Comprehend Medical `DetectPHI` under `PHI_ENGINE=comprehend_medical`
    — see *PHI masking engines* below) + **Bedrock Guardrails** on input and output.
-7. **Private-connectivity inference** — private connectivity to regional Amazon Bedrock through AWS PrivateLink where configured, under the AWS BAA; PHI is masked before model invocation; no egress to external non-AWS AI APIs. Endpoint policies, logging, and compliance controls remain customer-owned (the default interface-endpoint policy allows full access and must be customized).
+7. **Private-connectivity inference** — the LLM provider **defaults to in-account Amazon Bedrock** (`LLM_PROVIDER=bedrock`), reached over private connectivity to the regional service through AWS PrivateLink where configured, under the AWS BAA; PHI is masked before model invocation; no egress to external non-AWS AI APIs. The external Anthropic API is gated behind an explicit `ALLOW_EXTERNAL_LLM=1` opt-in (non-PHI/dev only), so a bare `LLM_PROVIDER` flip can no longer silently egress PHI (`platform_core/hpp_agent_platform/llm_factory.py`). Endpoint policies, logging, and compliance controls remain customer-owned (the default interface-endpoint policy allows full access and must be customized).
 
 ### PHI masking engines (deterministic default vs. Comprehend Medical opt-in)
 The fail-closed PHI masker (`platform_core/hpp_agent_platform/phi.py`) supports two engines
@@ -73,6 +75,11 @@ executes** — it is the always-on baseline, never bypassed.
   the **regional Comprehend Medical API via an interface VPC endpoint (AWS PrivateLink)** — traffic
   to the regional service stays on AWS private networking under the BAA; PHI is processed by the
   AWS managed service, not sent to any non-AWS third-party AI API.
+
+**Supply chain.** Dependencies are pinned in `requirements-lock.txt` (runtime) and
+`requirements-dev.txt` (tooling); CI runs **pip-audit as a blocking gate** (a known-vulnerable pinned
+dependency fails the build) alongside Bandit, detect-secrets, Checkov, and a CycloneDX SBOM — see
+`SECURITY-CI.md`.
 
 Full threat model: `docs/THREAT-MODEL.md`. Control-to-NIST mapping:
 `docs/NIST-800-53-CONTROL-MATRIX.md`. OWASP-LLM / MITRE ATLAS mapping:

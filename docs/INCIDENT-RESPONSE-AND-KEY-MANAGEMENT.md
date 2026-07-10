@@ -7,6 +7,7 @@ Companion to `runbooks/INCIDENT-RESPONSE.md` (ops procedure) — this is the sec
 |---|---|---|---|
 | **JWT signing (IdP)** | Identity assertions the gateway verifies | Cognito-managed JWKS | Cognito/IdP managed; rotate per IdP policy; gateway verifies via JWKS (`jwt_verify.py`) |
 | **Approval signing key** | Mint/verify bound approval tokens | `APPROVAL_SIGNING_SECRET` env | AWS Secrets Manager + KMS; reviewer service only; rotate ≤90d |
+| **Audit signing key** | Seal the hash-chained audit records — **separate secret from approvals** so an approval-key compromise cannot forge audit entries | `AUDIT_SIGNING_SECRET` env | AWS Secrets Manager + KMS; audit sink only; rotate ≤90d |
 | **Scoped-token secret** | Per-call tool tokens | `GATEWAY_TOKEN_SECRET` env | AgentCore Identity / STS (no static secret) |
 | **Data KMS CMK(s)** | Encrypt audit/HITL/WORM at rest | n/a | KMS CMK per environment/data class; key policy least-privilege; rotation enabled |
 | **Connector credentials** | EHR/clearinghouse/payer access | fixtures (none) | Secrets Manager; never in prompts/audit |
