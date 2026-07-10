@@ -79,3 +79,24 @@ def test_ml_hook_total_failure_returns_placeholder(monkeypatch):
     out = phi._ml_mask("SSN 123-45-6789")
     assert out == MASK_FAILURE_PLACEHOLDER
     assert "123-45-6789" not in out
+
+
+def test_real_data_mode_requires_ner_engine(monkeypatch):
+    """ALLOW_REAL_DATA without an NER engine must FAIL CLOSED (names would leak)."""
+    import pytest
+    from hpp_agent_platform.phi import mask, RealDataMaskingError
+    monkeypatch.setenv("ALLOW_REAL_DATA", "1")
+    monkeypatch.delenv("MASK_ENGINE", raising=False)
+    monkeypatch.delenv("PHI_ENGINE", raising=False)
+    with pytest.raises(RealDataMaskingError):
+        mask("Patient Jane Doe, MRN-4471190, seen 2026-01-02")
+
+
+def test_demo_mode_still_regex_only(monkeypatch):
+    """Default (no ALLOW_REAL_DATA) still masks structured IDs deterministically."""
+    from hpp_agent_platform.phi import mask
+    monkeypatch.delenv("ALLOW_REAL_DATA", raising=False)
+    monkeypatch.delenv("MASK_ENGINE", raising=False)
+    monkeypatch.delenv("PHI_ENGINE", raising=False)
+    out = mask("SSN 123-45-6789")
+    assert "123-45-6789" not in out

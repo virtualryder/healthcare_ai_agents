@@ -20,7 +20,7 @@
 A **reference accelerator** of **8 governed healthcare AI agents** — each a standalone reference
 architecture (own VPC, identity, data, and audit stack) — plus an optional **Care & Claims
 Orchestration Platform** that coordinates them across a patient/member journey. A **no-API-key
-automated test suite (196 tests green as of 2026-07-10)** exercises the control plane, including negative-case tests for
+automated test suite (258 tests green as of 2026-07-10)** exercises the control plane, including negative-case tests for
 cryptographic JWT verification, bound single-use approvals, the tamper-evident audit chain, and
 fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md` /
 `gtm/HPP-DECK-SOURCES.md`.
@@ -58,7 +58,7 @@ Nothing in this repository is production-certified; see `docs/PRODUCTION-READINE
 
 *Governance once, agents as add-ons: `platform_core` (`hpp-agent-platform` 0.1.0) **implements the Aegis Governance Pattern (AGP) v1.0** — the shared governance contract defined in the Aegis platform repo (`docs/14-GOVERNANCE-PATTERN-VERSIONING.md`). Conformance is declared in `platform_core/hpp_agent_platform/__init__.py` (`AEGIS_GOVERNANCE_PATTERN_VERSION`) and asserted by `platform_core/tests/test_agp_conformance.py`.*
 
-> **Validation update (2026-07-10).** The `hpp-gp01-acc` golden-path acceptance run was independently re-verified (CloudTrail, KMS deletion marker), and the run's Object-Locked WORM audit records are **still inspectable** — S3 Object Lock blocked the bucket's deletion at teardown, so the control demonstrated itself; the bucket is deliberately retained as tamper-proof evidence. Offline suite: 196 tests green. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+> **Validation update (2026-07-10).** The `hpp-gp01-acc` golden-path acceptance run was independently re-verified (CloudTrail, KMS deletion marker), and the run's Object-Locked WORM audit records are **still inspectable** — S3 Object Lock blocked the bucket's deletion at teardown, so the control demonstrated itself; the bucket is deliberately retained as tamper-proof evidence. Offline suite: 258 tests green. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
 
 ---
 
@@ -80,7 +80,7 @@ regulatory-weighted thresholds — **CI fails the build on any miss**:
 | **Recoverable-vs-write-off recall** | **≥ 0.95** (weighted highest) | **missing a recoverable denial is a wrongful write-off — the money harm** |
 | Entity F1 (claim_id · payer · denial_code · service) | ≥ 0.85 | extraction fidelity |
 | Appeal-draft grounding rate | ≥ 0.90 | no fabricated codes/amounts (reuses `governance/grounding.py`) |
-| **PHI-leak rate** | **== 0 (HARD GATE)** | platform masker strips every identifier before emit/audit |
+| **PHI-leak rate** | **== 0 (HARD GATE)** | masker strips structured Safe-Harbor identifiers before emit/audit; free-text names need the NER engine, mandatory in real-data mode (`ALLOW_REAL_DATA`) |
 | Appeal completeness | ≥ 0.95 | required fields present (presence, not truthiness) |
 | Duplicate accuracy | ≥ 0.90 | duplicate-vs-near-miss discrimination |
 
@@ -318,7 +318,7 @@ gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds
 ## Quick start
 ```bash
 pip install -e platform_core && pip install langgraph streamlit cryptography
-bash scripts/run_tests.sh                                    # 196 tests, no API key
+bash scripts/run_tests.sh                                    # 258 tests, no API key
 cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py        # fixtures
 EXTRACT_MODE=demo python demo/demo_live.py                                            # LIVE HTTP connector path (no API key)
 cd .. && PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py  # orchestration journeys
