@@ -15,7 +15,7 @@
 
 ## Before you push
 ```bash
-make test           # 258 tests (as of 2026-07-10), no API key
+make test           # 263 tests (as of 2026-07-10), no API key
 make lint-cfn       # CloudFormation clean
 python -m py_compile $(find platform_core governance 0*-*-agent -name '*.py')
 ```
