@@ -187,7 +187,7 @@ Every agent tool call passes through an **authenticated gateway**; there is no u
 - **Human approval for consequential actions.** Consequential tools are **withheld in code** and require a **bound, single-use, separation-of-duties** approval (approver ≠ requester; replay rejected).
 - **Scoped outbound authorization.** The gateway issues **short-lived, least-privilege** downstream credentials (IAM / OAuth / token-exchange / on-behalf-of), so "the agent acts only within the human's authority" holds end to end.
 - **Fail-closed masking.** PHI is masked before any model or audit write; on masker failure it **redacts rather than leaks**.
-- **Append-only audit + revocation.** Every decision (allow / deny / approval) is written to an **append-only** sink (IAM denies `UpdateItem`/`DeleteItem`) with **WORM** evidence; tools can be revoked / deny-listed at the registry.
+- **Append-only audit + revocation.** Every decision (allow / deny / approval) is written to an **append-only** sink: records are written by conditional `PutItem` (no overwrite), IAM permits `UpdateItem` **only** on the atomic sequence-counter item and **denies** `DeleteItem` on the audit table, and finalized records stream to **WORM** S3 Object Lock evidence. Tools can be revoked / deny-listed at the registry.
 - **Failure modes are fail-closed.** Missing/invalid token → **401**; unregistered tool → **deny**; missing approval → **deny**; masker or audit-write failure → **deny, not proceed**.
 
 In deployment this is **Amazon Bedrock AgentCore Gateway** (managed) or the **portable API-Gateway-+-Cognito-JWT** path; the portable path is the supported default and the one live-validated (the Aegis platform repo, Run 10; the same portable pattern deploys here).

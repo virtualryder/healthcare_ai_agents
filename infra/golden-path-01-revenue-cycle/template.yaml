@@ -82,10 +82,11 @@ Globals:
         # Deployed environments enforce bound, single-use, SoD approval tokens only;
         # the demo approval shape is rejected. Closes the approval-bypass finding.
         AUTH_REQUIRE_BOUND_APPROVAL: "1"
-        # Shared HMAC key for mint (reviewer fn) and verify (connector fn), resolved from
-        # Secrets Manager at deploy time. Never hardcoded.
+        # Two SEPARATE HMAC keys, each resolved from Secrets Manager at deploy time, never
+        # hardcoded. Splitting them means a role holding the approval key cannot forge audit
+        # signatures (and vice-versa) — a compromised runtime cannot re-sign a mutated ledger.
         APPROVAL_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${ApprovalSecret}:SecretString}}"
-        AUDIT_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${ApprovalSecret}:SecretString}}"
+        AUDIT_SIGNING_SECRET: !Sub "{{resolve:secretsmanager:${AuditSecret}:SecretString}}"
 
 Resources:
   # ── Network: private, no internet route ─────────────────────────────────────
@@ -297,6 +298,15 @@ Resources:
       KmsKeyId: !Ref AgentKey
       GenerateSecretString: {PasswordLength: 64, ExcludePunctuation: true}
 
+  # Distinct key for the audit ledger's tamper-evident signatures. Kept separate from the
+  # approval key so no single secret both authorizes actions and seals the audit trail.
+  AuditSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "HMAC signing key for HPP golden-path 01 audit ledger (${Environment})"
+      KmsKeyId: !Ref AgentKey
+      GenerateSecretString: {PasswordLength: 64, ExcludePunctuation: true}
+
   # ── Identity ────────────────────────────────────────────────────────────────
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -338,7 +348,15 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
-            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            # HITL review rows are legitimately mutable; audit records are NOT.
+            - {Effect: Allow, Action: [dynamodb:UpdateItem], Resource: !GetAtt HitlTable.Arn}
+            # Audit immutability: the ONLY UpdateItem permitted on the audit table is the atomic
+            # __seq__ counter (audit_id="__seq__"). Real records are written by conditional
+            # PutItem and can never be mutated; DeleteItem is explicitly denied.
+            - {Effect: Allow, Action: [dynamodb:UpdateItem], Resource: !GetAtt AuditTable.Arn,
+               Condition: {"ForAllValues:StringEquals": {"dynamodb:LeadingKeys": ["__seq__"]}}}
+            - {Effect: Deny, Action: [dynamodb:DeleteItem], Resource: !GetAtt AuditTable.Arn}
             - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
             - !If
@@ -388,7 +406,15 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
-            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            # HITL review rows are legitimately mutable; audit records are NOT.
+            - {Effect: Allow, Action: [dynamodb:UpdateItem], Resource: !GetAtt HitlTable.Arn}
+            # Audit immutability: the ONLY UpdateItem permitted on the audit table is the atomic
+            # __seq__ counter (audit_id="__seq__"). Real records are written by conditional
+            # PutItem and can never be mutated; DeleteItem is explicitly denied.
+            - {Effect: Allow, Action: [dynamodb:UpdateItem], Resource: !GetAtt AuditTable.Arn,
+               Condition: {"ForAllValues:StringEquals": {"dynamodb:LeadingKeys": ["__seq__"]}}}
+            - {Effect: Deny, Action: [dynamodb:DeleteItem], Resource: !GetAtt AuditTable.Arn}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
             # Resume the paused Step Functions execution after minting the bound token.
             # SendTaskSuccess is not resource-scopable, so it must be "*".
@@ -426,7 +452,15 @@ Resources:
       Policies:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
         - Statement:
-            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            - {Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:Query], Resource: [!GetAtt AuditTable.Arn, !GetAtt HitlTable.Arn]}
+            # HITL review rows are legitimately mutable; audit records are NOT.
+            - {Effect: Allow, Action: [dynamodb:UpdateItem], Resource: !GetAtt HitlTable.Arn}
+            # Audit immutability: the ONLY UpdateItem permitted on the audit table is the atomic
+            # __seq__ counter (audit_id="__seq__"). Real records are written by conditional
+            # PutItem and can never be mutated; DeleteItem is explicitly denied.
+            - {Effect: Allow, Action: [dynamodb:UpdateItem], Resource: !GetAtt AuditTable.Arn,
+               Condition: {"ForAllValues:StringEquals": {"dynamodb:LeadingKeys": ["__seq__"]}}}
+            - {Effect: Deny, Action: [dynamodb:DeleteItem], Resource: !GetAtt AuditTable.Arn}
             - {Effect: Allow, Action: [dynamodb:PutItem], Resource: !GetAtt JtiTable.Arn}
             - {Effect: Allow, Action: [kms:Decrypt, kms:GenerateDataKey], Resource: !GetAtt AgentKey.Arn}
             - !If
