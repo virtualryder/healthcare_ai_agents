@@ -4,7 +4,7 @@
 #
 # Pure functions (state -> partial state update). Runs in EXTRACT_MODE=demo with
 # no LLM call (deterministic edit/necessity comparison + templated finding), and
-# uses the LLM factory + gateway tools in live mode. The agent FLAGS for human
+# uses the LLM factory + gateway tools in live mode (reference agents 03-08 are deterministic by design; the live LLM path is NOT wired here — see agents 01/02. EXTRACT_MODE=live raises NotImplementedError). The agent FLAGS for human
 # review; it never recoups, adjusts payment, or submits. langgraph-free so nodes
 # are unit-testable.
 # ============================================================
@@ -109,7 +109,7 @@ def draft_finding(state: Dict[str, Any]) -> Dict[str, Any]:
     billed = ", ".join(state.get("billed_cpt", []) or ["the billed codes"])
     supported = ", ".join(state.get("suggested", {}).get("suggested_cpt", []) or ["the documented codes"])
     necessity = state.get("medical_necessity", {})
-    if _demo() or True:  # deterministic, evidence-grounded finding
+    if _demo():  # deterministic, evidence-grounded finding
         if finding == "CLEAN":
             rationale = (f"Review complete: billed codes ({billed}) are consistent with the documentation "
                          f"and pass NCCI/MUE edits. No payment-integrity issue identified.")
@@ -127,6 +127,14 @@ def draft_finding(state: Dict[str, Any]) -> Dict[str, Any]:
                          f"{necessity.get('source', 'coverage policy')}. Request supporting documentation.")
         citations = [{"title": necessity.get("source", "CMS LCD/NCD coverage database"), "url": ""}]
         drafted_by = "demo-stub"
+    else:
+        # Live LLM drafting is a documented extension point, not wired in this reference
+        # agent. Fail loud rather than silently pretend (agents 01/02 show the Bedrock path).
+        raise NotImplementedError(
+            "live LLM drafting is not implemented in this reference agent; run with "
+            "EXTRACT_MODE=demo (deterministic reference workflow). See agents 01/02 "
+            "for the wired Bedrock + gateway drafting path."
+        )
     return {"rationale": rationale, "citations": citations, "drafted_by": drafted_by,
             "current_step": "draft_finding",
             "completed_steps": state.get("completed_steps", []) + ["draft_finding"]}

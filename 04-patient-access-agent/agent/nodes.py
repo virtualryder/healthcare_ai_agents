@@ -4,7 +4,7 @@
 #
 # Pure functions (state -> partial state update). Runs in EXTRACT_MODE=demo with
 # no LLM call (deterministic, state-grounded plain-language summary), and uses the
-# LLM factory + gateway tools in live mode. Cost estimates are ALWAYS the
+# LLM factory + gateway tools in live mode (reference agents 03-08 are deterministic by design; the live LLM path is NOT wired here — see agents 01/02. EXTRACT_MODE=live raises NotImplementedError). Cost estimates are ALWAYS the
 # deterministic registration.estimate_cost tool (Good Faith Estimate), never the
 # LLM. langgraph-free so nodes are unit-testable.
 # ============================================================
@@ -91,7 +91,7 @@ def prepare_summary(state: Dict[str, Any]) -> Dict[str, Any]:
     elig = state.get("eligibility", {})
     plan = elig.get("plan") or est.get("plan", "your plan")
     patient_cost = est.get("estimated_patient_responsibility")
-    if _demo() or True:  # deterministic, state-grounded, plain language
+    if _demo():  # deterministic, state-grounded, plain language
         parts = [f"Your plan is {plan}."]
         if patient_cost is not None:
             parts.append(f"Your estimated cost for this visit is ${patient_cost:.2f}. This is an estimate.")
@@ -104,6 +104,14 @@ def prepare_summary(state: Dict[str, Any]) -> Dict[str, Any]:
         summary = " ".join(parts)
         citations = [{"title": est.get("basis", "Good Faith Estimate (No Surprises Act)"), "url": ""}]
         drafted_by = "demo-stub"
+    else:
+        # Live LLM drafting is a documented extension point, not wired in this reference
+        # agent. Fail loud rather than silently pretend (agents 01/02 show the Bedrock path).
+        raise NotImplementedError(
+            "live LLM drafting is not implemented in this reference agent; run with "
+            "EXTRACT_MODE=demo (deterministic reference workflow). See agents 01/02 "
+            "for the wired Bedrock + gateway drafting path."
+        )
     return {"summary": summary, "citations": citations, "drafted_by": drafted_by,
             "current_step": "prepare_summary",
             "completed_steps": state.get("completed_steps", []) + ["prepare_summary"]}
