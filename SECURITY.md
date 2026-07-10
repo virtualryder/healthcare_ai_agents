@@ -44,7 +44,7 @@ reports. Include affected file/commit, reproduction, and impact. Target: acknowl
 6. **Fail-closed PHI masking** (`phi.py`, HIPAA Safe Harbor identifiers; deterministic by default,
    with optional HIPAA-eligible Amazon Comprehend Medical `DetectPHI` under `PHI_ENGINE=comprehend_medical`
    — see *PHI masking engines* below) + **Bedrock Guardrails** on input and output.
-7. **Private-connectivity inference** — Bedrock via VPC endpoint (AWS PrivateLink) under the AWS BAA; no PHI egress to external AI APIs — traffic to the regional Bedrock service stays on AWS private networking.
+7. **Private-connectivity inference** — private connectivity to regional Amazon Bedrock through AWS PrivateLink where configured, under the AWS BAA; PHI is masked before model invocation; no egress to external non-AWS AI APIs. Endpoint policies, logging, and compliance controls remain customer-owned (the default interface-endpoint policy allows full access and must be customized).
 
 ### PHI masking engines (deterministic default vs. Comprehend Medical opt-in)
 The fail-closed PHI masker (`platform_core/hpp_agent_platform/phi.py`) supports two engines

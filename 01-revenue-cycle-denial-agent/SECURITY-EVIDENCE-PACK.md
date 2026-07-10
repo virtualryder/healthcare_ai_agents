@@ -88,9 +88,9 @@ These are produced by `tools/collect_runtime_evidence.sh` against a deployed sta
 |---|---|---|
 | Runtime PHI/PII/CJI masking (real audit record) | ☐ pending clean-account capture | `--audit-table` scan |
 | Bedrock Guardrails blocking a real invoke | ☐ pending | guardrail config + blocked-invoke screenshot |
-| Locked egress (NFW allow + drop) | ☐ pending | `--log-group` NFW alert logs |
+| Locked egress (NFW allow + drop) | ☐ template ready | real connector reaches **one** allow-listed FQDN (`hapi.fhir.org`); deploy `infra/golden-path-01-revenue-cycle/egress-fhir.yaml`, then `--log-group` NFW alert logs of every drop |
 | IAM Access Analyzer findings | ☐ pending | `accessanalyzer list-findings` |
-| CloudWatch security alarms + dashboard | ☐ pending | `describe-alarms` + dashboard export |
+| CloudWatch security alarms + dashboard | ☐ template ready | deploy `infra/cloudformation/security-alarms.yaml` (10 signals: denials, JWT, self-approval, replay, injection, masking, guardrail, audit-fail, egress, budget) then `describe-alarms` + dashboard export |
 | WORM overwrite denied (Object Lock) | ☐ pending | `--audit-bucket` overwrite probe |
 | Step Functions paused at the human gate | ☐ pending | execution screenshot |
 | Teardown — zero residual resources | ☐ pending | `destroy.sh` output |
@@ -102,6 +102,9 @@ These are produced by `tools/collect_runtime_evidence.sh` against a deployed sta
 - **Evidence Vault** (`test_evidence_vault.py`): audit append-only by API; IaC denies `UpdateItem`/`DeleteItem` + S3 Object Lock.
 - **End-to-end auth chain** (`make auth-demo`): IdP → token exchange → intersection → SoD → append-only audit.
 - **Scored quality** (`make eval-*`): thresholds incl. **PHI-leak = 0**.
+- **Real locked-egress connector** (`test_fhir_connector.py`, 10/10 + opt-in live smoke): governed
+  read from the public **HAPI FHIR R4** server through the gateway — reads allowed, writes fail-closed,
+  least-privilege denial enforced, PHI masking exercised. Egress control: `EGRESS-FHIR.md`.
 - **AGP v1.0 conformance** ([`../AGP-CONFORMANCE.md`](../AGP-CONFORMANCE.md)) + **security CI** ([`../SECURITY-CI.md`](../SECURITY-CI.md)).
 
 *If any statement reads stronger than [`../NOT-CLAIMS.md`](../NOT-CLAIMS.md) or

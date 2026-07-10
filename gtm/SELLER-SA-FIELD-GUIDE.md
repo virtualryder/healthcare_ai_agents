@@ -2,8 +2,8 @@
 
 A phase-by-phase playbook for the seller and the partner/AWS Solutions Architect taking the
 **HPP AI Agent Suite ("HCOS")** from a first conversation to a production agent. The suite is
-honest about its maturity: it is **Demonstrated and Deployable-by-design** today (185 tests as of
-2026-07-07, no API key — 8 agents + governance + platform_core security + care_platform + golden path), and
+honest about its maturity: it is **Demonstrated and Deployable-by-design** today (196 tests as of
+2026-07-10, no API key — 8 agents + governance + platform_core security + care_platform + golden path), and
 production-readiness (CSV/CSA validation, IdP federation, live connectors, penetration test,
 HITRUST/SOC 2) is the **engagement**. An executed **AWS BAA** precedes any PHI. Cite all external
 numbers from `gtm/HPP-DECK-SOURCES.md` / `SOURCES.md`; never invent competing figures.

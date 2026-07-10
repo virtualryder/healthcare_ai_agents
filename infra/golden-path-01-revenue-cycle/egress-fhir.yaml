@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Controlled egress for the HAPI FHIR (R4) real EHR connector. Provisions an AWS
+  Network Firewall whose stateful policy ALLOWS TLS/HTTPS to hapi.fhir.org ONLY and
+  DENIES all other egress (default deny). This is the answer to the CISO question
+  "how do you stop the agent from calling arbitrary endpoints?" — the connector can
+  reach the one approved public FHIR data source and nothing else. The HAPI test
+  server is public and synthetic (no BAA); the SAME pattern (allow-list a specific
+  FQDN) applies to a customer's HealthLake / payer / Availity FHIR endpoint under a
+  BAA — swap AllowedFqdn, keep the control.
+
+  Deploy into the same VPC as the golden-path-01 stack, place the firewall endpoint in
+  a dedicated firewall subnet, and route the connector subnet's 0.0.0.0/0 through the
+  firewall endpoint (then to NAT/IGW). See EGRESS-FHIR.md for the wiring.
+
+Parameters:
+  Environment: { Type: String, Default: dev, AllowedValues: [dev, test, prod] }
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to attach the firewall to (the golden-path-01 network VPC).
+  FirewallSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Dedicated firewall subnet(s), one per AZ, for the Network Firewall endpoint(s).
+  AllowedFqdn:
+    Type: String
+    Default: hapi.fhir.org
+    Description: The single approved external endpoint the connector may reach.
+
+Resources:
+  FhirAllowRuleGroup:
+    Type: AWS::NetworkFirewall::RuleGroup
+    Properties:
+      RuleGroupName: !Sub "hpp-01-${Environment}-fhir-allow"
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        StatefulRuleOptions: { RuleOrder: STRICT_ORDER }
+        RulesSource:
+          RulesSourceList:
+            TargetTypes: [TLS_SNI, HTTP_HOST]
+            GeneratedRulesType: ALLOWLIST
+            Targets:
+              - !Ref AllowedFqdn
+      Tags:
+        - { Key: app, Value: hpp-01-revenue-cycle }
+        - { Key: purpose, Value: fhir-egress-allowlist }
+
+  FirewallPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    Properties:
+      FirewallPolicyName: !Sub "hpp-01-${Environment}-egress-policy"
+      FirewallPolicy:
+        StatelessDefaultActions: ["aws:forward_to_sfe"]
+        StatelessFragmentDefaultActions: ["aws:forward_to_sfe"]
+        StatefulEngineOptions:
+          RuleOrder: STRICT_ORDER
+          StreamExceptionPolicy: DROP
+        StatefulDefaultActions: ["aws:drop_established", "aws:alert_established"]
+        StatefulRuleGroupReferences:
+          - ResourceArn: !Ref FhirAllowRuleGroup
+            Priority: 1
+      Tags:
+        - { Key: app, Value: hpp-01-revenue-cycle }
+
+  Firewall:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: !Sub "hpp-01-${Environment}-egress-fw"
+      FirewallPolicyArn: !Ref FirewallPolicy
+      VpcId: !Ref VpcId
+      SubnetMappings:
+        - SubnetId: !Select [0, !Ref FirewallSubnetIds]
+      DeleteProtection: false
+      Description: Egress firewall — allows the connector to reach hapi.fhir.org only.
+      Tags:
+        - { Key: app, Value: hpp-01-revenue-cycle }
+
+  FirewallLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/hpp-01/${Environment}/egress-firewall"
+      RetentionInDays: 90
+
+  FirewallLogging:
+    Type: AWS::NetworkFirewall::LoggingConfiguration
+    Properties:
+      FirewallArn: !Ref Firewall
+      LoggingConfiguration:
+        LogDestinationConfigs:
+          - LogType: ALERT
+            LogDestinationType: CloudWatchLogs
+            LogDestination: { logGroup: !Ref FirewallLogGroup }
+
+Outputs:
+  FirewallArn:
+    Value: !Ref Firewall
+  AllowedFqdn:
+    Value: !Ref AllowedFqdn
+    Description: The only external endpoint the connector may reach.
+  FirewallLogGroup:
+    Value: !Ref FirewallLogGroup
+    Description: ALERT logs of every denied egress attempt (proof the allow-list holds).
+  WiringNote:
+    Value: "Route the connector subnet's 0.0.0.0/0 to the firewall endpoint in FirewallSubnetIds, then that subnet to NAT/IGW. See EGRESS-FHIR.md."

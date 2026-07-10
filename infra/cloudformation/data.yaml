@@ -8,6 +8,15 @@ Parameters:
   Environment: {Type: String, Default: dev}
   KmsKeyArn: {Type: String}
   AuditRetentionDays: {Type: Number, Default: 2555, Description: "WORM retention; default 7 years. Tune to the org records schedule."}
+  RetentionMode:
+    Type: String
+    Default: COMPLIANCE
+    AllowedValues: [COMPLIANCE, GOVERNANCE]
+    Description: "S3 Object Lock mode. COMPLIANCE (regulated production) cannot be bypassed by anyone; GOVERNANCE (pilots) can be bypassed only with s3:BypassGovernanceRetention, which the bucket policy denies except the break-glass role."
+  BreakGlassRoleArn:
+    Type: String
+    Default: ""
+    Description: "Optional ARN of the single break-glass role permitted to bypass GOVERNANCE retention (MFA + second-approver + time-boxed + alarmed). Empty = no bypass permitted."
 Resources:
   AuditTable:
     Type: AWS::DynamoDB::Table
@@ -32,18 +41,47 @@ Resources:
       SSESpecification: {SSEEnabled: true, SSEType: KMS, KMSMasterKeyId: !Ref KmsKeyArn}
   WormBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub "hpp-${AgentId}-${Environment}-worm-${AWS::AccountId}"
       ObjectLockEnabled: true
       ObjectLockConfiguration:
         ObjectLockEnabled: Enabled
-        Rule: {DefaultRetention: {Mode: COMPLIANCE, Days: !Ref AuditRetentionDays}}
+        Rule: {DefaultRetention: {Mode: !Ref RetentionMode, Days: !Ref AuditRetentionDays}}
       VersioningConfiguration: {Status: Enabled}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - {ServerSideEncryptionByDefault: {SSEAlgorithm: aws:kms, KMSMasterKeyID: !Ref KmsKeyArn}}
       PublicAccessBlockConfiguration:
         {BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true}
+  # Governance-bypass control: deny s3:BypassGovernanceRetention + locked-version deletion for
+  # everyone except an optional break-glass role. Enable CloudTrail S3 data events on this bucket
+  # (account level) to log any attempt. See RETENTION-MODES.md.
+  WormBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WormBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyGovernanceRetentionBypassExceptBreakGlass
+            Effect: Deny
+            Principal: "*"
+            Action: [s3:BypassGovernanceRetention, s3:DeleteObjectVersion]
+            Resource: !Sub "${WormBucket.Arn}/*"
+            Condition:
+              StringNotEquals:
+                aws:PrincipalArn: !Ref BreakGlassRoleArn
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !GetAtt WormBucket.Arn
+              - !Sub "${WormBucket.Arn}/*"
+            Condition:
+              Bool: {"aws:SecureTransport": false}
 Outputs:
   AuditTableName: {Value: !Ref AuditTable}
   HitlTableName: {Value: !Ref HitlTable}

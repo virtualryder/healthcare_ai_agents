@@ -10,7 +10,7 @@ Modes:
     live      bare reference REST/FHIR round-trip (LiveHttpConnector)
     sandbox   resilient adapter (SandboxHttpConnector): auth, idempotency, retries,
               timeout, circuit breaker, write reconciliation, lineage — point at a
-              customer sandbox (Availity / Change Healthcare / payer FHIR) or the façade
+              customer sandbox (Availity / Change Healthcare / payer FHIR) or the facade
 
 Live/sandbox resolution: if <KIND>_BASE_URL is set (e.g. PAYER_BASE_URL, EHR_BASE_URL) — or
 SANDBOX_BASE_URL as a fallback — an HTTP adapter is returned. Otherwise a LiveConnector stub is
@@ -46,6 +46,16 @@ def get_connector(kind: str, mode: Optional[str] = None) -> Connector:
         # scaffold so the fixture/live defaults for every other kind are unchanged.
         from .denials import DenialsConnector
         return DenialsConnector(mode=mode)
+
+    _fhir_switch = os.getenv("EHR_SOURCE", "").strip().lower() in ("hapifhir", "fhir")
+    if kind == "ehr" and mode in ("live", "sandbox") and _fhir_switch:
+        # EHR_SOURCE=hapifhir: real, public, read-only EHR facts from the HAPI FHIR
+        # R4 test server (synthetic, de-identified), grounding the denial agent reads.
+        # Additive and guarded: only engages for kind=ehr when the switch is set, so
+        # the fixture default and every other kind/mode are unchanged. Writes stay
+        # human-gated to the customer validated system (see fhir.py).
+        from .fhir import HapiFhirEhrConnector
+        return HapiFhirEhrConnector()
 
     if mode == "sandbox":
         base_url = _base_url(kind)

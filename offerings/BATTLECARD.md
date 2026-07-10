@@ -71,7 +71,7 @@ the model.
 - **vs. build-it-yourself:** Anyone can wire an LLM call. The expensive, slow part is the
   governance scaffolding — deny-by-default, the framework-enforced human gate, PHI masking, the
   append-only audit, grounding, prompt pinning, fairness, the regime→control→AWS mappings — built
-  and tested here (185 automated tests as of 2026-07-07, no API key), reused across eight agents.
+  and tested here (196 automated tests as of 2026-07-10, no API key), reused across eight agents.
 - **vs. point tools:** A single-workflow tool brings its own governance (or none). This suite
   carries one governed control plane across denials, prior auth, UM, coding, care management,
   and member services, so compliance is consistent and the marginal cost of each agent falls.

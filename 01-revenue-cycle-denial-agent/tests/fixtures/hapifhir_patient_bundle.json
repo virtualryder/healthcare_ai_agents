@@ -1,0 +1,19 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "total": 1,
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "example-1284321",
+        "active": true,
+        "name": [
+          { "use": "official", "family": "Chalmers", "given": ["Peter", "James"] }
+        ],
+        "gender": "male",
+        "birthDate": "1974-12-25"
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "resourceType": "Bundle",
+  "type": "searchset",
+  "total": 2,
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-778001",
+        "status": "current",
+        "type": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "18842-5", "display": "Discharge summary" }
+          ],
+          "text": "Discharge summary"
+        },
+        "date": "2026-05-14T09:12:00Z",
+        "description": "Inpatient discharge summary supporting medical necessity of admission"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-778002",
+        "status": "current",
+        "type": {
+          "coding": [
+            { "system": "http://loinc.org", "code": "11488-4", "display": "Consult note" }
+          ],
+          "text": "Consult note"
+        },
+        "date": "2026-05-13T15:40:00Z",
+        "description": "Cardiology consult documenting inpatient-level clinical indications"
+      }
+    }
+  ]
+}

@@ -9,9 +9,9 @@ positioning: reference-accelerator
 updated: 2026-07-09
 
 tests:
-  offline_total: 185                          # 177 passed + 8 skipped without langgraph (2026-07-07)
-  reproduce: "make test   # scripts/run_tests.sh — per-agent isolation, no API key"
-  last_verified: 2026-07-07
+  offline_total: 196                          # 185 prior + 11 for the HAPI FHIR real connector (10 offline + 1 live-smoke skip)
+  reproduce: "make test   # scripts/run_tests.sh — per-agent isolation (--import-mode=importlib), no API key"
+  last_verified: 2026-07-10
 
 clean_account_deploy:
   status: hero-only                           # IMPORTANT: do NOT pitch 02-08 as equally validated
@@ -31,7 +31,9 @@ agents:
     scored_eval: true                         # governance/evals/score_denial (recoverable-recall, PHI-leak=0)
     connectors:
       - {kind: denials, source: "documented X12 835 / HealthLake scaffold", tier: "1-fixture+scaffold", note: "no clean public denial API"}
+      - {kind: ehr, source: "HAPI FHIR R4 public test server (synthetic)", tier: 3-real-public, note: "read-only, locked egress (egress-fhir.yaml), EHR_SOURCE=hapifhir"}
       - {kind: denials, source: "payer/clearinghouse 835 feed, Epic/ADT (customer)", tier: 4-not-done, note: "under BAA"}
+      - {kind: ehr, source: "AWS HealthLake / payer FHIR (customer)", tier: 4-not-done, note: "same interface, under BAA"}
   - {id: 02-prior-authorization, name: Prior Authorization, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
   - {id: 03-clinical-administration, name: Clinical Administration, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}
   - {id: 04-patient-access, name: Patient Access, maturity: demonstrated, clean_account_evidence: false, connectors_tier: 1-fixture}

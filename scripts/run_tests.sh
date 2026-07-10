@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
 FAIL=0
-run() { echo "=== $1 ==="; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$2" python -m pytest $3 -p no:cacheprovider -q || FAIL=1; }
+run() { echo "=== $1 ==="; PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$2" python -m pytest $3 -p no:cacheprovider --import-mode=importlib -q || FAIL=1; }
 
 run "platform + governance" "platform_core:." "platform_core/tests governance"
 run "care_platform (orchestration)" "platform_core:care_platform:." "care_platform/hpp_care_platform/tests"

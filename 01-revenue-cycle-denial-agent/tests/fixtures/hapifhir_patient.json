@@ -1,0 +1,13 @@
+{
+  "resourceType": "Patient",
+  "id": "example-1284321",
+  "active": true,
+  "name": [
+    { "use": "official", "family": "Chalmers", "given": ["Peter", "James"] }
+  ],
+  "gender": "male",
+  "birthDate": "1974-12-25",
+  "identifier": [
+    { "system": "urn:oid:1.2.36.146.595.217.0.1", "value": "12345" }
+  ]
+}
