@@ -86,6 +86,9 @@ Outputs:
   AuditTableName: {Value: !Ref AuditTable}
   HitlTableName: {Value: !Ref HitlTable}
   WormBucketName: {Value: !Ref WormBucket}
-  # NOTE: append-only is enforced by an Org SCP / IAM policy denying dynamodb:UpdateItem &
-  # dynamodb:DeleteItem on the audit table (the agent role above grants only PutItem/Get/Query).
-  # See ../../runbooks (roadmap) for the SCP and the WORM legal-hold procedure.
+  # NOTE (multi-agent reference stack): here the agent role grants only PutItem/Get/Query, so
+  # audit records cannot be mutated; org-wide DeleteItem denial is expected to come from a
+  # customer Org SCP (see ../../runbooks roadmap for the SCP + WORM legal-hold procedure).
+  # The VALIDATED golden path (infra/golden-path-01-revenue-cycle/template.yaml) enforces this
+  # in-template: conditional PutItem, UpdateItem scoped to the __seq__ counter only, and an
+  # explicit IAM Deny on DeleteItem — no SCP dependency.

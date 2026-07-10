@@ -38,9 +38,10 @@ reports. Include affected file/commit, reproduction, and impact. Target: acknowl
 3. **Bound human approval** — single-use, separation-of-duties, tamper-evident approval tokens
    cryptographically bound to the exact tool + arguments (`approvals.py`).
 4. **Scoped, short-lived tokens** — per-call, tool-scoped, expiring (`mcp_gateway/tokens.py`).
-5. **Append-only, hash-chained audit + WORM** — chained records + (prod) conditional writes with
-   an IAM Update/Delete deny + S3 Object Lock (`mcp_gateway/audit.py`, `audit_sinks.py`,
-   `infra/cloudformation/data.yaml`).
+5. **Append-only, hash-chained audit + WORM** — chained records + (prod) conditional `PutItem`
+   writes, IAM scoping `UpdateItem` to the atomic `__seq__` counter only and explicitly denying
+   `DeleteItem`, plus S3 Object Lock (`mcp_gateway/audit.py`, `audit_sinks.py`, and the enforced
+   IAM in `infra/golden-path-01-revenue-cycle/template.yaml`).
 6. **Fail-closed PHI masking** (`phi.py`, HIPAA Safe Harbor identifiers; deterministic by default,
    with optional HIPAA-eligible Amazon Comprehend Medical `DetectPHI` under `PHI_ENGINE=comprehend_medical`
    — see *PHI masking engines* below) + **Bedrock Guardrails** on input and output.
