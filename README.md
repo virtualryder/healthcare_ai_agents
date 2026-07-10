@@ -5,6 +5,12 @@
 > 📊 **Honest status, one source of truth:** per-agent maturity, clean-account evidence, connector tiers, and the test count live in machine-readable [`MATURITY.yaml`](MATURITY.yaml); the four connector-maturity terms are defined in [`docs/CONNECTOR-MATURITY.md`](docs/CONNECTOR-MATURITY.md). Prose defers to `MATURITY.yaml`; a portfolio drift-checker (`tools/check_maturity.py`) keeps them aligned.
 
 > 🔗 **Conforms to the Aegis Governance Pattern (AGP) v1.0.** The 8 required controls (identity, deny-by-default gateway, least-privilege intersection, bound SoD approval, fail-closed masking, append-only+WORM audit, token budgets, model gateway+grounding) are mapped to their implementing module and proving test in [`AGP-CONFORMANCE.md`](AGP-CONFORMANCE.md).
+
+> ™ **Brand & trademark:** collateral follows two tracks — an **internal-AWS** track (approved templates only) and a **customer-safe public** track (neutral branding, plain-text "Built on AWS", no AWS logo). Rules in [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md). Nothing here implies AWS sponsorship or endorsement.
+
+> 🧭 **Part of the governed-agent portfolio.** This pack conforms to the **Aegis Governance Pattern (AGP v1.0)**; **Aegis** (`aegis-ai-governance-platform-aws`) is the hub — see its `PORTFOLIO-START-HERE.md` (how the packs flow together) and `DEPLOY-EVERYTHING.md` (deploy everything end-to-end). Hero reviewer pack: [`01-revenue-cycle-denial-agent/ASSURANCE-PACKET.md`](01-revenue-cycle-denial-agent/ASSURANCE-PACKET.md) · [`PILOT-SOW`](01-revenue-cycle-denial-agent/PILOT-SOW.md).
+
+> 📚 **Governance & readiness docs (this repo):** [`NOT-CLAIMS`](NOT-CLAIMS.md) · [`MATURITY.yaml`](MATURITY.yaml) · [`Connector maturity`](docs/CONNECTOR-MATURITY.md) · [`AGP conformance`](AGP-CONFORMANCE.md) · [`Operating model`](OPERATING-MODEL.md) · [`Release packet`](RELEASE-PACKET.md) · [`AWS run-cost`](AWS-RUN-COST.md) · [`Brand & trademark`](BRAND-AND-TRADEMARK.md)
 ### Governed AI Agents for Health Providers & Plans — Built on AWS
 
 [![CI](https://github.com/virtualryder/healthcare_ai_agents/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
@@ -272,7 +278,7 @@ Monthly run-cost model (pilot vs production): [`offerings/TCO-MODEL.md`](offerin
   `gtm/SELLER-FIRST-MEETING-CHEATSHEET.md`, `gtm/HPP-PLATFORM-GTM-STORY.md`.
 - **Decks (`decks/`):** 8 per-agent narrative decks (issue → cost → what customers see → how the
   market solves it → how we solve it → why defensible) + an executive overview + a CISO/CMIO review +
-  the orchestration-platform deck, each with the AWS brand mark and grounded, cited figures.
+  the orchestration-platform deck, each with the an optional logo (internal-track only) and grounded, cited figures.
   One-page **leave-behinds** in `decks/leave-behinds/`.
 
 ## 5. Production readiness — and who owns what

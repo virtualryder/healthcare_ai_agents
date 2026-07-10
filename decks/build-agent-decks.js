@@ -1,4 +1,4 @@
-// HPP deck generator — AWS-style decks mimicking the reference format & palette.
+// HPP deck generator — professional decks using a clean, consistent format and palette.
 // Per-agent arc: Title · The Issue & Its Cost · What Customers Are Seeing (and how
 // the market solves it) · How We Solve It (governed, human-decided) · AWS
 // Architecture · Why It's Defensible. Plus an Executive Overview and a CISO/CMIO

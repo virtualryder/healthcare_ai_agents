@@ -17,7 +17,7 @@ All notable changes to the HPP AI Agent Suite. Pre-1.0 reference accelerator; on
   event bus, three cross-agent journeys + `aws-native-reference/care-platform/` runner. 7 tests.
 - **CI** (`.github/workflows/ci.yml`): tests + security + IaC lint. `CHANGELOG.md`, `VERSION`,
   root `SOURCES.md`.
-- **GTM/decks:** AWS brand mark on every deck; platform deck; leave-behind one-pagers; SA field
+- **GTM/decks:** an optional logo (internal-track only) on every deck; platform deck; leave-behind one-pagers; SA field
   guide; per-agent deployment handbooks (planned in this pass).
 
 ## [0.1.0] — 2026-06-25 — Initial suite
