@@ -4,7 +4,7 @@
 #
 # Pure functions (state -> partial state update). Runs in EXTRACT_MODE=demo with
 # no LLM call (deterministic, criteria-grounded recommendation), and uses the LLM
-# factory + gateway tools in live mode. A four-fifths fairness screen runs on any
+# factory + gateway tools in live mode (reference agents 03-08 are deterministic by design; the live LLM path is NOT wired here — see agents 01/02. EXTRACT_MODE=live raises NotImplementedError). A four-fifths fairness screen runs on any
 # provided flag/rank cohort. langgraph-free so nodes are unit-testable.
 # ============================================================
 from __future__ import annotations
@@ -80,7 +80,7 @@ def draft_recommendation(state: Dict[str, Any]) -> Dict[str, Any]:
         recommendation = "MEETS_CRITERIA"
     else:
         recommendation = "DOES_NOT_MEET"
-    if _demo() or True:  # deterministic, criteria-grounded rationale
+    if _demo():  # deterministic, criteria-grounded rationale
         if recommendation == "MEETS_CRITERIA":
             ind = ", ".join(crit.get("matched_indications", []) or ["documented indications"])
             rationale = (f"Recommendation: evidence MEETS {crit.get('criteria_set', 'clinical')} criteria "
@@ -96,6 +96,14 @@ def draft_recommendation(state: Dict[str, Any]) -> Dict[str, Any]:
                          "Requesting additional clinical documentation before review.")
         citations = [{"title": guideline.get("title", "Clinical guideline"), "url": guideline.get("url", "")}]
         drafted_by = "demo-stub"
+    else:
+        # Live LLM drafting is a documented extension point, not wired in this reference
+        # agent. Fail loud rather than silently pretend (agents 01/02 show the Bedrock path).
+        raise NotImplementedError(
+            "live LLM drafting is not implemented in this reference agent; run with "
+            "EXTRACT_MODE=demo (deterministic reference workflow). See agents 01/02 "
+            "for the wired Bedrock + gateway drafting path."
+        )
     return {"recommendation": recommendation, "rationale": rationale, "citations": citations,
             "drafted_by": drafted_by, "current_step": "draft_recommendation",
             "completed_steps": state.get("completed_steps", []) + ["draft_recommendation"]}

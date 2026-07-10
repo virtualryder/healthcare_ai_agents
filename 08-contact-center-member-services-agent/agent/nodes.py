@@ -4,7 +4,7 @@
 #
 # Pure functions (state -> partial state update). Runs in EXTRACT_MODE=demo with
 # no LLM call (deterministic, data-grounded plain-language response), and uses the
-# LLM factory + gateway tools in live mode. No account-specific disclosure without
+# LLM factory + gateway tools in live mode (reference agents 03-08 are deterministic by design; the live LLM path is NOT wired here — see agents 01/02. EXTRACT_MODE=live raises NotImplementedError). No account-specific disclosure without
 # a verified member identity. langgraph-free so nodes are unit-testable.
 # ============================================================
 from __future__ import annotations
@@ -71,7 +71,7 @@ def draft_response(state: Dict[str, Any]) -> Dict[str, Any]:
                 "current_step": "draft_response",
                 "completed_steps": state.get("completed_steps", []) + ["draft_response"]}
     itype = state.get("inquiry_type")
-    if _demo() or True:  # deterministic, data-grounded, plain language
+    if _demo():  # deterministic, data-grounded, plain language
         if itype == InquiryType.CLAIM_STATUS.value:
             cs = state.get("claim_status", {})
             codes = ", ".join(cs.get("denial_codes", []) or [])
@@ -92,6 +92,14 @@ def draft_response(state: Dict[str, Any]) -> Dict[str, Any]:
             citations = [{"title": s.get("title", ""), "url": s.get("url", "")}
                          for s in state.get("retrieved_sources", [])]
         drafted_by = "demo-stub"
+    else:
+        # Live LLM drafting is a documented extension point, not wired in this reference
+        # agent. Fail loud rather than silently pretend (agents 01/02 show the Bedrock path).
+        raise NotImplementedError(
+            "live LLM drafting is not implemented in this reference agent; run with "
+            "EXTRACT_MODE=demo (deterministic reference workflow). See agents 01/02 "
+            "for the wired Bedrock + gateway drafting path."
+        )
     return {"response": response, "citations": citations, "drafted_by": drafted_by,
             "current_step": "draft_response",
             "completed_steps": state.get("completed_steps", []) + ["draft_response"]}

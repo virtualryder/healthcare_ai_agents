@@ -4,7 +4,7 @@
 #
 # Pure functions (state -> partial state update). Runs in EXTRACT_MODE=demo with
 # no LLM call (deterministic, plan-grounded outreach), and uses the LLM factory +
-# gateway tools in live mode. A four-fifths fairness screen runs on any provided
+# gateway tools in live mode (reference agents 03-08 are deterministic by design; the live LLM path is NOT wired here — see agents 01/02. EXTRACT_MODE=live raises NotImplementedError). A four-fifths fairness screen runs on any provided
 # risk-stratification cohort. langgraph-free so nodes are unit-testable.
 # ============================================================
 from __future__ import annotations
@@ -84,7 +84,7 @@ def draft_artifacts(state: Dict[str, Any]) -> Dict[str, Any]:
     gaps = ", ".join(state.get("open_gaps", []))
     sdoh = ", ".join(state.get("sdoh_flags", []) or [])
     plan = state.get("care_plan", {})
-    if _demo() or True:  # deterministic, plan-grounded, plain language
+    if _demo():  # deterministic, plan-grounded, plain language
         outreach = ("Hi — we want to help you stay healthy. Our records show you are due for: "
                     f"{gaps}. Please call us to set this up. We can help with any barriers.")
         if sdoh:
@@ -94,6 +94,14 @@ def draft_artifacts(state: Dict[str, Any]) -> Dict[str, Any]:
                             "Care-manager sign-off required.")
         citations = [{"title": plan.get("program", "Care plan"), "url": ""}]
         drafted_by = "demo-stub"
+    else:
+        # Live LLM drafting is a documented extension point, not wired in this reference
+        # agent. Fail loud rather than silently pretend (agents 01/02 show the Bedrock path).
+        raise NotImplementedError(
+            "live LLM drafting is not implemented in this reference agent; run with "
+            "EXTRACT_MODE=demo (deterministic reference workflow). See agents 01/02 "
+            "for the wired Bedrock + gateway drafting path."
+        )
     return {"outreach": outreach, "care_plan_update": care_plan_update, "citations": citations,
             "drafted_by": drafted_by, "current_step": "draft_artifacts",
             "completed_steps": state.get("completed_steps", []) + ["draft_artifacts"]}

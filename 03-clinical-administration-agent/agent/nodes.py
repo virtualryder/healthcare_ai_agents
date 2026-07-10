@@ -4,7 +4,7 @@
 #
 # Pure functions (state -> partial state update). Runs in EXTRACT_MODE=demo with
 # no LLM call (deterministic, chart-grounded templates), and uses the LLM factory
-# + gateway tools in live mode. langgraph-free so nodes are unit-testable;
+# + gateway tools in live mode (reference agents 03-08 are deterministic by design; the live LLM path is NOT wired here — see agents 01/02. EXTRACT_MODE=live raises NotImplementedError). langgraph-free so nodes are unit-testable;
 # graph.py wires them with a framework-enforced clinician sign-off interrupt.
 # ============================================================
 from __future__ import annotations
@@ -72,7 +72,7 @@ def produce_artifact(state: Dict[str, Any]) -> Dict[str, Any]:
     problems = ", ".join(summary.get("active_problems", []) or ["no active problems on file"])
     meds = ", ".join(summary.get("active_meds", []) or ["none"])
     goals = ", ".join(plan.get("goals", []) or [])
-    if _demo() or True:  # deterministic, chart-grounded draft (demo default)
+    if _demo():  # deterministic, chart-grounded draft (demo default)
         if task == TaskType.VISIT_PREP.value:
             artifact = (f"Visit prep: active problems {problems}. Current medications {meds}. "
                         f"Open care-plan items: {goals}. Last encounter type {enc.get('type', 'n/a')}.")
@@ -91,6 +91,14 @@ def produce_artifact(state: Dict[str, Any]) -> Dict[str, Any]:
                         f"Recent encounter {enc.get('type', 'n/a')}. Open care-plan items: {goals}.")
         citations = [{"title": "Care plan", "url": ""}] if goals else []
         drafted_by = "demo-stub"
+    else:
+        # Live LLM drafting is a documented extension point, not wired in this reference
+        # agent. Fail loud rather than silently pretend (agents 01/02 show the Bedrock path).
+        raise NotImplementedError(
+            "live LLM drafting is not implemented in this reference agent; run with "
+            "EXTRACT_MODE=demo (deterministic reference workflow). See agents 01/02 "
+            "for the wired Bedrock + gateway drafting path."
+        )
     return {"artifact": artifact, "citations": citations, "drafted_by": drafted_by,
             "patient_facing": patient_facing, "current_step": "produce_artifact",
             "completed_steps": state.get("completed_steps", []) + ["produce_artifact"]}

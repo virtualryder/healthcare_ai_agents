@@ -48,3 +48,15 @@ def test_part2_without_consent_escalates():
     assert s["recommended_action"] == RecommendedAction.ESCALATE
     final = resume(s, APPROVAL)
     assert final["case_status"] == "ESCALATED" and final.get("note_ref") is None
+
+
+def test_live_mode_fails_loud_not_silent(monkeypatch):
+    """Regression: EXTRACT_MODE=live must raise NotImplementedError, proving the previously
+    unreachable `if _demo() or True` dead-code branch is gone. Reference agents 03-08 are
+    deterministic by design; the live LLM path is not wired here (agents 01/02 show it)."""
+    import pytest
+    from agent.nodes import produce_artifact
+    monkeypatch.setenv("EXTRACT_MODE", "live")
+    with pytest.raises(NotImplementedError):
+        produce_artifact({"task_type": "chart_summary", "patient_summary": {}, "encounter": {},
+                          "care_plan": {}})
