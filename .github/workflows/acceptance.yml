@@ -48,7 +48,7 @@ jobs:
         run: |
           pip install bandit pip-audit checkov
           bandit -ll -r platform_core/hpp_agent_platform infra/golden-path-01-revenue-cycle/src
-          pip-audit -r platform_core/requirements-dev.txt || true
+          pip-audit -r platform_core/requirements-dev.txt
           checkov -d infra/golden-path-01-revenue-cycle --quiet --compact || true
       - name: SBOM (CycloneDX)
         run: |
