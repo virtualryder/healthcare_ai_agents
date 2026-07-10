@@ -12,6 +12,8 @@
 # ============================================================
 from __future__ import annotations
 
+import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -21,9 +23,31 @@ sys.path.insert(0, str(_REPO / "platform_core"))
 
 AGENT_ID = "01-revenue-cycle-denial"
 
+
+def _load_jwks_from_env() -> Optional[Dict[str, Any]]:
+    """Verification JWKS for the gateway's own JWT check (defense in depth alongside
+    the serve.py edge authorizer). Supplied out-of-band via AUTH_JWKS (inline JSON) or
+    AUTH_JWKS_PATH (a file). When set, AUTH_REQUIRE_JWT=1 lets the gateway cryptograph-
+    ically verify a raw JWT presented in ``acting_user_claims['jwt']`` and use ITS
+    claims — never client-asserted roles. Returns None when neither is configured."""
+    raw = os.getenv("AUTH_JWKS")
+    if raw:
+        try:
+            return json.loads(raw)
+        except (ValueError, TypeError):  # pragma: no cover - misconfig
+            return None
+    path = os.getenv("AUTH_JWKS_PATH")
+    if path:
+        try:
+            return json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):  # pragma: no cover - misconfig
+            return None
+    return None
+
+
 try:
     from hpp_agent_platform.mcp_gateway import MCPGateway
-    _GATEWAY: Optional[Any] = MCPGateway()
+    _GATEWAY: Optional[Any] = MCPGateway(jwks=_load_jwks_from_env())
 except Exception:  # pragma: no cover
     _GATEWAY = None
 

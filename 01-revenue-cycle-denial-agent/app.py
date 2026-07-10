@@ -14,6 +14,18 @@ st.set_page_config(page_title="Revenue-Cycle & Denial Agent", page_icon="🏥", 
 st.title("🏥 Revenue-Cycle & Denial Management Agent")
 st.caption("Governed AI on AWS — grounded appeals, PHI-masked audit, human-approved submission. The agent never submits a claim.")
 
+# The shipped image is secure by default (AUTH_REQUIRE_JWT=1): the gateway will not accept
+# the demo's fixture claims without a verified JWT. This local dashboard has no authorizer,
+# so it requires an EXPLICIT auth-off override — we do not silently disable it here.
+if os.getenv("AUTH_REQUIRE_JWT", "").strip().lower() in ("1", "true", "yes"):
+    st.error(
+        "AUTH_REQUIRE_JWT is enabled (the secure-by-default image setting). The demo runs "
+        "with fixture claims and no authorizer, so it needs an explicit override:\n\n"
+        "`AUTH_REQUIRE_JWT=0 EXTRACT_MODE=demo streamlit run app.py`\n\n"
+        "The runtime /invocations path stays secure — see README “Container auth contract”."
+    )
+    st.stop()
+
 CLAIMS = {"sub": "rcm-rep-1", "custom:hpp_role": "DENIALS_SPECIALIST"}
 claim_ref = st.text_input("Denied claim reference", "CLM-2026-55810")
 if st.button("Review denial & draft appeal"):

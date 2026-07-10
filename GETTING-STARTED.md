@@ -34,7 +34,7 @@ Each of the eight agents has the same `demo/demo_run.py` and `app.py`. Swap `01-
 
 ```bash
 bash scripts/run_tests.sh
-# → platform + governance, then each agent in isolation → "ALL SUITES PASSED" (263 tests as of 2026-07-10)
+# → platform + governance, then each agent in isolation → "ALL SUITES PASSED" (268 tests as of 2026-07-10)
 ```
 
 This proves the governance controls — deny-by-default authorization, the human gate, PHI

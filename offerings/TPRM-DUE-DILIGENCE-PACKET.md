@@ -110,7 +110,8 @@ production configuration.
 
 The accelerator is **not** itself a SOC 2- or HITRUST-certified product, and we do not claim it
 is. It is a *Demonstrated + Deployable-by-design* accelerator whose controls are built and
-tested (263 automated tests as of 2026-07-10, no API key) and mapped to recognized regimes. Achieving the
+tested (268 automated tests as of 2026-07-10, no API key) and mapped to recognized regimes. Achieving the
+tested (268 automated tests as of 2026-07-10, no API key) and mapped to recognized regimes. Achieving the
 customer's certification scope — customer computer-system validation (CSV/CSA), live-connector
 validation, penetration test, and a HITRUST/SOC 2 assessment of the deployed system — is part of
 the production engagement, not a day-one deliverable. We will not overstate this; the maturity
