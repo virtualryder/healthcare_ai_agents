@@ -288,7 +288,9 @@ Monthly run-cost model (pilot vs production): [`offerings/TCO-MODEL.md`](offerin
 **Honest status: a production-shaped accelerator, not an authorized, production-ready system — and it
 doesn't claim to be.** Verifiable today: consequential actions withheld in code + tested · framework-
 enforced human gate · cryptographic JWT verification · bound single-use SoD approvals · hash-chained
-append-only audit + WORM · PHI masking · complete AWS security architecture · no lock-in · a 185-test
+append-only audit + WORM with IAM-enforced immutability (conditional `PutItem`, `DeleteItem` denied)
+and split audit/approval signing secrets · PHI masking (fail-closed; NER mandatory in real-data mode) ·
+pinned dependency lockfiles with blocking pip-audit · complete AWS security architecture · no lock-in · a 263-test
 no-API-key suite incl. control-plane negative cases. Still required before go-live: **AWS BAA**, live
 connectors, IdP integration, Guardrail/red-team tuning, CSV/CSA validation, penetration test, DR game
 day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklist:**
