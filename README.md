@@ -80,7 +80,7 @@ regulatory-weighted thresholds — **CI fails the build on any miss**:
 | **Recoverable-vs-write-off recall** | **≥ 0.95** (weighted highest) | **missing a recoverable denial is a wrongful write-off — the money harm** |
 | Entity F1 (claim_id · payer · denial_code · service) | ≥ 0.85 | extraction fidelity |
 | Appeal-draft grounding rate | ≥ 0.90 | no fabricated codes/amounts (reuses `governance/grounding.py`) |
-| **PHI-leak rate** | **== 0 (HARD GATE)** | platform masker strips every identifier before emit/audit |
+| **PHI-leak rate** | **== 0 (HARD GATE)** | masker strips structured Safe-Harbor identifiers before emit/audit; free-text names need the NER engine, mandatory in real-data mode (`ALLOW_REAL_DATA`) |
 | Appeal completeness | ≥ 0.95 | required fields present (presence, not truthiness) |
 | Duplicate accuracy | ≥ 0.90 | duplicate-vs-near-miss discrimination |
 

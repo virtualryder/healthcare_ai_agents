@@ -40,6 +40,24 @@ import os
 import re
 from typing import Optional
 
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+class RealDataMaskingError(RuntimeError):
+    """
+    Raised when real-data mode (ALLOW_REAL_DATA) is enabled but the mandatory NER
+    engine is not selected/available. The masker FAILS CLOSED rather than silently
+    degrading to the regex-only deterministic pass — which does NOT mask free-text
+    patient NAMES (HIPAA Safe Harbor identifier #1) — so real PHI is never written
+    to a log/prompt/audit with names left in the clear.
+    """
+
+
+def _real_data_mode() -> bool:
+    """True when the caller has asserted this text may contain REAL PHI."""
+    return os.getenv("ALLOW_REAL_DATA", "").strip().lower() in _TRUTHY
+
+
 # ── Identifier patterns (order matters: most specific first) ──────────────────
 _SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
@@ -138,9 +156,19 @@ def mask(text: Optional[str]) -> str:
     """
     if not text:
         return ""
+    strict = _real_data_mode()
+    # Real-data mode: the deterministic regex pass does NOT mask free-text patient
+    # names (Safe Harbor #1). Require an NER engine and fail closed if absent, rather
+    # than silently emitting regex-only output that could leak a name.
+    if strict and not _ml_engine_selected():
+        raise RealDataMaskingError(
+            "ALLOW_REAL_DATA is set but no NER engine is selected "
+            "(set MASK_ENGINE=ml or PHI_ENGINE=comprehend_medical). Refusing to mask "
+            "real PHI with the regex-only pass, which does not mask free-text names."
+        )
     out = _apply_deterministic(str(text))
     if _ml_engine_selected():
-        out = _ml_mask(out)
+        out = _ml_mask(out, strict=strict)
     return out
 
 
@@ -158,22 +186,33 @@ def _resolve_ml_redactor():
     return redact
 
 
-def _ml_mask(text: str) -> str:
+def _ml_mask(text: str, strict: bool = False) -> str:
     """
     Optional ML NER hook (Amazon Comprehend Medical / generic NER) — FAIL-CLOSED.
     On the success path the deterministic Safe-Harbor pass is re-applied AFTER
     the ML redaction (Comprehend Medical + regex together, never one alone).
-    engine absent -> deterministic output stands; engine raises -> deterministic
-    fallback + ML_MASK_FALLBACK_FLAG; deterministic also raises -> the
-    MASK_FAILURE_PLACEHOLDER. The unmasked input is NEVER returned on failure.
+
+    Demo/default (strict=False): engine absent -> deterministic output stands;
+    engine raises -> deterministic fallback + ML_MASK_FALLBACK_FLAG; deterministic
+    also raises -> MASK_FAILURE_PLACEHOLDER. The unmasked input is NEVER returned.
+
+    Real-data (strict=True, ALLOW_REAL_DATA): a missing or failing NER engine is a
+    hard error (RealDataMaskingError) — we must not fall back to regex-only, which
+    would leave free-text names in the clear.
     """
     try:
         redact = _resolve_ml_redactor()
-    except ImportError:  # optional dependency absent — expected in most deploys
+    except ImportError as exc:  # optional dependency absent — expected in most deploys
+        if strict:
+            raise RealDataMaskingError(
+                "real-data mode requires the NER engine, but its dependency is not importable"
+            ) from exc
         return _apply_deterministic(text)
     try:
         return _apply_deterministic(redact(text))
-    except Exception:
+    except Exception as exc:
+        if strict:
+            raise RealDataMaskingError(f"real-data NER pass failed: {exc}") from exc
         try:
             return f"{_apply_deterministic(text)} {ML_MASK_FALLBACK_FLAG}"
         except Exception:
