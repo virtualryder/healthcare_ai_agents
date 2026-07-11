@@ -105,7 +105,7 @@ submission is human-gated.**
 
 ## ▶ Start here — what to read first
 1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the
-   185-test suite (as of 2026-07-07), then deploy into a new AWS account.
+   268-test suite (see `MATURITY.yaml`), then deploy into a new AWS account.
 2. **`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`** — honest gap assessment + RACI.
 3. **The security package** — `SECURITY.md`, `docs/THREAT-MODEL.md`,
    `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md`,
