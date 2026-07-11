@@ -54,6 +54,42 @@ configure `BEDROCK_GUARDRAIL_ID`), and point `PAS_BASE_URL` / `CLEARINGHOUSE_BAS
 the gateway and connector signatures are identical to demo. See `.env.example` and
 `docs/aws-deployment-guide.md`.
 
+## Container auth contract (secure by default)
+
+The shipped image (`Dockerfile`) is **secure by default**: it sets `AUTH_REQUIRE_JWT=1`
+and `AUTH_REQUIRE_BOUND_APPROVAL=1` as `ENV`, so the runtime `/invocations` path
+**never trusts caller-supplied `acting_user_claims` or `human_approval` in the request
+body**:
+
+- **`AUTH_REQUIRE_JWT=1`** — `serve.py` acts as the edge authorizer. It requires a
+  cryptographically verified JWT (a `Authorization: Bearer <jwt>` token, verified against
+  the JWKS supplied out-of-band via `AUTH_JWKS` inline JSON or `AUTH_JWKS_PATH`) and
+  **derives the acting user's identity from that token** — the verified claims *replace*
+  whatever the caller put in `acting_user_claims`. A missing/invalid token, or a missing
+  JWKS, **fails closed (HTTP 401)**. The gateway re-verifies the same token (defense in
+  depth), so client-asserted roles can never reach a system of record.
+- **`AUTH_REQUIRE_BOUND_APPROVAL=1`** — only a **bound, single-use, separation-of-duties**
+  approval token minted by the reviewer service can authorize a high-risk write
+  (`payer.submit_appeal`, `pas.update_case`). A bare `{"approved": true, "reviewer": …}`
+  in the body is refused.
+
+**Deployment requirement:** run this container behind an OIDC/JWT authorizer that forwards
+the verified token — **Amazon Bedrock AgentCore Identity**, or **API Gateway / ALB + OIDC**
+(Cognito). A bare ALB with no authorizer in front is **not** a supported posture; the
+container fails closed rather than trusting the body.
+
+**Running the demo:** the bundled Streamlit/CLI demo (`EXTRACT_MODE=demo`) has no
+authorizer, so it requires an **explicit** override — it is intentionally *not* enabled by
+the runtime default:
+
+```bash
+docker run -e EXTRACT_MODE=demo -e AUTH_REQUIRE_JWT=0 -p 8501:8501 <image> \
+  streamlit run 01-revenue-cycle-denial-agent/app.py
+```
+
+We do **not** weaken the `/invocations` contract to accommodate the demo. See
+`../SECURITY.md` and `docs/aws-deployment-guide.md`.
+
 ## Docs
 - `docs/aws-deployment-guide.md` — container + native deployment, AgentCore contract
 - `docs/integration-guide.md` — connector mapping (Epic/Oracle Health, Change Healthcare/Availity, payer X12/FHIR)

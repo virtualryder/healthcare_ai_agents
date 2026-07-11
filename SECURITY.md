@@ -49,6 +49,18 @@ reports. Include affected file/commit, reproduction, and impact. Target: acknowl
    — see *PHI masking engines* below) + **Bedrock Guardrails** on input and output.
 7. **Private-connectivity inference** — the LLM provider **defaults to in-account Amazon Bedrock** (`LLM_PROVIDER=bedrock`), reached over private connectivity to the regional service through AWS PrivateLink where configured, under the AWS BAA; PHI is masked before model invocation; no egress to external non-AWS AI APIs. The external Anthropic API is gated behind an explicit `ALLOW_EXTERNAL_LLM=1` opt-in (non-PHI/dev only), so a bare `LLM_PROVIDER` flip can no longer silently egress PHI (`platform_core/hpp_agent_platform/llm_factory.py`). Endpoint policies, logging, and compliance controls remain customer-owned (the default interface-endpoint policy allows full access and must be customized).
 
+### Container runtime posture — secure by default
+The Agent-01 container image ships with `AUTH_REQUIRE_JWT=1` and `AUTH_REQUIRE_BOUND_APPROVAL=1`
+as `ENV`, so the `/invocations` runtime path **never trusts caller-supplied `acting_user_claims`
+or `human_approval` in the request body**. `serve.py` is the edge authorizer: it requires a
+verified `Authorization: Bearer` JWT (checked against a JWKS supplied via `AUTH_JWKS` /
+`AUTH_JWKS_PATH`) and derives identity from the token, failing closed (HTTP 401) on any defect;
+the gateway re-verifies (defense in depth). **Running this container outside AgentCore requires
+an authorizer in front** (Amazon Bedrock AgentCore Identity, or API Gateway / ALB + OIDC) — a
+bare ALB with no authorizer is not a supported posture. The bundled Streamlit/CLI demo
+(`EXTRACT_MODE=demo`) requires an explicit `AUTH_REQUIRE_JWT=0` override and does not weaken that
+contract. See `01-revenue-cycle-denial-agent/README.md` ("Container auth contract").
+
 ### PHI masking engines (deterministic default vs. Comprehend Medical opt-in)
 The fail-closed PHI masker (`platform_core/hpp_agent_platform/phi.py`) supports two engines
 at the log/audit boundary. Whichever engine runs, the **deterministic Safe-Harbor pass always
