@@ -46,7 +46,7 @@ jobs:
         with: {python-version: "3.12"}
       - name: SAST + dependency + IaC scanners
         run: |
-          pip install bandit pip-audit checkov
+          pip install bandit==1.9.4 pip-audit checkov
           bandit -ll -r platform_core/hpp_agent_platform infra/golden-path-01-revenue-cycle/src
           pip-audit -r platform_core/requirements-dev.txt
           checkov -d infra/golden-path-01-revenue-cycle --quiet --compact || true
