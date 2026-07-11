@@ -6,6 +6,14 @@
 variable "agent_id" { type = string }
 variable "environment" { type = string }
 
+# Optional Bedrock foundation-model ARN the agent may invoke (e.g.
+# arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0).
+# Empty -> no bedrock:InvokeModel permission is granted (never scoped to "*").
+variable "bedrock_model_arn" {
+  type    = string
+  default = ""
+}
+
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 data "aws_region" "current" {}
@@ -123,23 +131,32 @@ resource "aws_iam_role_policy" "agent" {
   role = aws_iam_role.agent.id
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel", "bedrock:ApplyGuardrail"]
-        Resource = "*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["kms:Decrypt", "kms:GenerateDataKey"]
-        Resource = aws_kms_key.agent.arn
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query"]
-        Resource = "arn:${data.aws_partition.current.partition}:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/hpp-${var.agent_id}-${var.environment}-*"
-      }
-    ]
+    Statement = concat(
+      var.bedrock_model_arn == "" ? [] : [
+        {
+          Effect   = "Allow"
+          Action   = ["bedrock:InvokeModel"]
+          Resource = var.bedrock_model_arn
+        }
+      ],
+      [
+        {
+          Effect   = "Allow"
+          Action   = ["bedrock:ApplyGuardrail"]
+          Resource = aws_bedrock_guardrail.phi.guardrail_arn
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["kms:Decrypt", "kms:GenerateDataKey"]
+          Resource = aws_kms_key.agent.arn
+        },
+        {
+          Effect   = "Allow"
+          Action   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query"]
+          Resource = "arn:${data.aws_partition.current.partition}:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/hpp-${var.agent_id}-${var.environment}-*"
+        }
+      ]
+    )
   })
 }
 
