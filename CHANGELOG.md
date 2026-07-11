@@ -20,11 +20,11 @@ All notable changes to the HPP AI Agent Suite. Pre-1.0 reference accelerator; on
 - **Pinned lockfiles** (`requirements-lock.txt` runtime + `requirements-dev.txt` tooling); **pip-audit is now
   a blocking CI gate** (dropped `|| true`) — a known-vulnerable pinned dependency fails the build.
 - `tools/check_maturity.py` + `governance/tests/test_no_status_drift.py` — a **status-drift gate** that fails
-  CI if any current-state doc cites a test count that disagrees with `MATURITY.yaml` (now 263).
+  CI if any current-state doc cites a test count that disagrees with `MATURITY.yaml` (now 270).
 ### Changed
 - **Agents 03–08 dead `if _demo() or True` branch removed** — they now fail loud in live mode. They are
   **deterministic reference workflows**; agents 01/02 carry the real LLM path.
-- Docs synced to the above; `MATURITY.yaml` test counts regenerated to **263**.
+- Docs synced to the above; `MATURITY.yaml` test counts regenerated to **263 → 270** (current canonical total).
 
 ## [0.2.0] — 2026-06-26 — Depth pass (to/beyond the SLG bar)
 ### Added

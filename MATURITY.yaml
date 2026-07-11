@@ -9,7 +9,7 @@ positioning: reference-accelerator
 updated: 2026-07-09
 
 tests:
-  offline_total: 268                          # collected-test count; verified by tools/check_maturity.py
+  offline_total: 270                          # collected-test count; verified by tools/check_maturity.py
   reproduce: "make test   # scripts/run_tests.sh — per-agent isolation (--import-mode=importlib), no API key"
   last_verified: 2026-07-10
 

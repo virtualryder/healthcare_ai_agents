@@ -16,8 +16,8 @@ deployable in that environment is the governed control plane: one MCP authorizat
 (deny-by-default + least-privilege intersection), the framework-enforced human gate, short-lived
 tool-scoped tokens, the PHI masker, the append-only audit trail, grounding verification, the
 hash-pinned prompt registry, the eval harness and red team, the fairness and accessibility
-screens, and the regime→control→AWS mappings. Built once, tested (268 automated tests as of
-screens, and the regime→control→AWS mappings. Built once, tested (268 automated tests as of
+screens, and the regime→control→AWS mappings. Built once, tested (270 automated tests as of
+screens, and the regime→control→AWS mappings. Built once, tested (270 automated tests as of
 2026-07-07, no API key), and reused across all eight agents — so the marginal compliance cost of each new agent
 falls. The agents ride on top and are interchangeable; the platform is what you are buying.
 
@@ -69,8 +69,8 @@ consequential authorities mapped to real roles (`BILLER`, `UM_MEDICAL_DIRECTOR`,
 clinician); a framework-enforced human gate demonstrable live (LangGraph `interrupt_before`
 / Step Functions `waitForTaskToken`); in-account Bedrock under the customer's BAA with no PHI
 egress; eight pre-built workflows on one platform; CloudFormation (cfn-lint clean) and Terraform
-parity for per-agent isolated infrastructure; and 268 automated tests (as of 2026-07-10) that run with no API key.
-parity for per-agent isolated infrastructure; and 268 automated tests (as of 2026-07-10) that run with no API key.
+parity for per-agent isolated infrastructure; and 270 automated tests (as of 2026-07-10) that run with no API key.
+parity for per-agent isolated infrastructure; and 270 automated tests (as of 2026-07-10) that run with no API key.
 And we are honest about maturity — production-readiness (CSV/CSA, live connectors, pen test,
 HITRUST) is the engagement, not a day-one claim. That honesty is itself a differentiator in a
 market full of "production-ready AI" claims.
