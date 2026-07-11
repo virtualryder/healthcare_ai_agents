@@ -25,3 +25,6 @@ packaged.yaml
 cleanup_worm_bucket.ps1
 .aws-sam/
 _qa*/
+
+# vendored build artifact (staged by infra/golden-path-01-revenue-cycle/build.sh)
+infra/golden-path-01-revenue-cycle/src/hpp_agent_platform/
