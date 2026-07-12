@@ -15,7 +15,11 @@
 
 ## Before you push
 ```bash
-make test           # 268 tests (as of 2026-07-10), no API key
+<<<<<<< HEAD
+make test           # 270 tests (as of 2026-07-10), no API key
+=======
+make test           # 270 tests (as of 2026-07-10), no API key
+>>>>>>> fix(container): enforce JWT + bound approval by default in the Agent-01 image
 make lint-cfn       # CloudFormation clean
 python -m py_compile $(find platform_core governance 0*-*-agent -name '*.py')
 ```

@@ -1,5 +1,33 @@
 # HPP AI Agent Suite
 
+> ### 🛡️ Part of the Aegis Governed-Agent Portfolio — one solution, five repositories
+> This repository is **1 of 5 that form a single, review-as-one solution**: the **Aegis** governance
+> platform (the control plane) plus four vertical agent packs. All five conform to one versioned
+> governance contract — **AGP v1.0** — and one deploy pattern, so a CIO / CISO reviews and approves them
+> **together** for pilot.
+>
+> | # | Repository | Role |
+> |--:|---|---|
+> | 1 | **`aegis-ai-governance-platform-aws`** | Governance **platform & pattern** (deny-by-default control plane) |
+> | 2 | **`hcls-ai-agents`** | **Life sciences** — pharma / biotech / CRO |
+> | 3 | **`slg-ai-agents`** | **State & local government** |
+> | 4 | **`healthcare_ai_agents`** (**HPP**) | **Healthcare payer / provider** |
+> | 5 | **`edu-ai-agents`** | **Education** — K-12 & higher-ed |
+>
+> **▶ You are here: `healthcare_ai_agents`.**
+>
+> **New to the portfolio?** Start in the **`aegis-ai-governance-platform-aws`** repo:
+> `PORTFOLIO-EXECUTIVE-SUMMARY.md` (10-minute front door) → `SA-DEPLOYMENT-RUNBOOK.md` (deploy the
+> platform + heroes in a new AWS account) → `PORTFOLIO-MATURITY-SCORECARD.md` (what's proven) →
+> `DO-NOT-CLAIM.md` (the honesty boundary).
+>
+> **Naming:** **`healthcare_ai_agents` = HPP** (payer / provider: claims, prior-auth, denials) and
+> **`hcls-ai-agents` = life sciences** (pharmacovigilance, clinical, regulatory) are **distinct
+> products**; the underscore-vs-hyphen naming is historical.
+>
+> ---
+
+
 > ⚠️ **Before you cite anything here:** read [**What we will *not* claim**](NOT-CLAIMS.md) — this is an independent reference accelerator that runs on AWS. It is **not** an AWS service, **not** AWS-supported, **not** an official AWS solution, and **not** a compliance certification. That page governs if any wording elsewhere reads stronger.
 
 > 📊 **Honest status, one source of truth:** per-agent maturity, clean-account evidence, connector tiers, and the test count live in machine-readable [`MATURITY.yaml`](MATURITY.yaml); the four connector-maturity terms are defined in [`docs/CONNECTOR-MATURITY.md`](docs/CONNECTOR-MATURITY.md). Prose defers to `MATURITY.yaml`; a portfolio drift-checker (`tools/check_maturity.py`) keeps them aligned.
@@ -20,7 +48,11 @@
 A **reference accelerator** of **8 governed healthcare AI agents** — each a standalone reference
 architecture (own VPC, identity, data, and audit stack) — plus an optional **Care & Claims
 Orchestration Platform** that coordinates them across a patient/member journey. A **no-API-key
-automated test suite (268 tests green as of 2026-07-10)** exercises the control plane, including negative-case tests for
+<<<<<<< HEAD
+automated test suite (270 tests green as of 2026-07-10)** exercises the control plane, including negative-case tests for
+=======
+automated test suite (270 tests green as of 2026-07-10)** exercises the control plane, including negative-case tests for
+>>>>>>> fix(container): enforce JWT + bound approval by default in the Agent-01 image
 cryptographic JWT verification, bound single-use approvals, the tamper-evident audit chain, and
 fail-closed PHI masking. Every external figure is evidence-tiered in `SOURCES.md` /
 `gtm/HPP-DECK-SOURCES.md`.
@@ -58,7 +90,11 @@ Nothing in this repository is production-certified; see `docs/PRODUCTION-READINE
 
 *Governance once, agents as add-ons: `platform_core` (`hpp-agent-platform` 0.1.0) **implements the Aegis Governance Pattern (AGP) v1.0** — the shared governance contract defined in the Aegis platform repo (`docs/14-GOVERNANCE-PATTERN-VERSIONING.md`). Conformance is declared in `platform_core/hpp_agent_platform/__init__.py` (`AEGIS_GOVERNANCE_PATTERN_VERSION`) and asserted by `platform_core/tests/test_agp_conformance.py`.*
 
-> **Validation update (2026-07-10).** The `hpp-gp01-acc` golden-path acceptance run was independently re-verified (CloudTrail, KMS deletion marker), and the run's Object-Locked WORM audit records are **still inspectable** — S3 Object Lock blocked the bucket's deletion at teardown, so the control demonstrated itself; the bucket is deliberately retained as tamper-proof evidence. Offline suite: 268 tests green. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+<<<<<<< HEAD
+> **Validation update (2026-07-10).** The `hpp-gp01-acc` golden-path acceptance run was independently re-verified (CloudTrail, KMS deletion marker), and the run's Object-Locked WORM audit records are **still inspectable** — S3 Object Lock blocked the bucket's deletion at teardown, so the control demonstrated itself; the bucket is deliberately retained as tamper-proof evidence. Offline suite: 270 tests green. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+=======
+> **Validation update (2026-07-10).** The `hpp-gp01-acc` golden-path acceptance run was independently re-verified (CloudTrail, KMS deletion marker), and the run's Object-Locked WORM audit records are **still inspectable** — S3 Object Lock blocked the bucket's deletion at teardown, so the control demonstrated itself; the bucket is deliberately retained as tamper-proof evidence. Offline suite: 270 tests green. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+>>>>>>> fix(container): enforce JWT + bound approval by default in the Agent-01 image
 
 ---
 
@@ -105,7 +141,7 @@ submission is human-gated.**
 
 ## ▶ Start here — what to read first
 1. **`GETTING-STARTED.md`** — prove the flagship agent on your laptop (no API key), run the
-   268-test suite (see `MATURITY.yaml`), then deploy into a new AWS account.
+   185-test suite (as of 2026-07-07), then deploy into a new AWS account.
 2. **`docs/PRODUCTION-READINESS-AND-SHARED-RESPONSIBILITY.md`** — honest gap assessment + RACI.
 3. **The security package** — `SECURITY.md`, `docs/THREAT-MODEL.md`,
    `docs/NIST-800-53-CONTROL-MATRIX.md`, `docs/OWASP-LLM-ATLAS-MAPPING.md`,
@@ -290,7 +326,7 @@ doesn't claim to be.** Verifiable today: consequential actions withheld in code 
 enforced human gate · cryptographic JWT verification · bound single-use SoD approvals · hash-chained
 append-only audit + WORM with IAM-enforced immutability (conditional `PutItem`, `DeleteItem` denied)
 and split audit/approval signing secrets · PHI masking (fail-closed; NER mandatory in real-data mode) ·
-pinned dependency lockfiles with blocking pip-audit · complete AWS security architecture · no lock-in · a 263-test
+pinned dependency lockfiles with blocking pip-audit · complete AWS security architecture · no lock-in · a 270-test
 no-API-key suite incl. control-plane negative cases. Still required before go-live: **AWS BAA**, live
 connectors, IdP integration, Guardrail/red-team tuning, CSV/CSA validation, penetration test, DR game
 day, HITRUST/SOC 2. **Full gap assessment + 15-row RACI + gated go-live checklist:**
@@ -323,7 +359,11 @@ gtm/  decks/  offerings/  runbooks/  deliverables/   # GTM, decks(+leave-behinds
 ## Quick start
 ```bash
 pip install -e platform_core && pip install langgraph streamlit cryptography
-bash scripts/run_tests.sh                                    # 268 tests, no API key
+<<<<<<< HEAD
+bash scripts/run_tests.sh                                    # 270 tests, no API key
+=======
+bash scripts/run_tests.sh                                    # 270 tests, no API key
+>>>>>>> fix(container): enforce JWT + bound approval by default in the Agent-01 image
 cd 01-revenue-cycle-denial-agent && EXTRACT_MODE=demo python demo/demo_run.py        # fixtures
 EXTRACT_MODE=demo python demo/demo_live.py                                            # LIVE HTTP connector path (no API key)
 cd .. && PYTHONPATH=platform_core:care_platform python aws-native-reference/care-platform/local_runner.py  # orchestration journeys
