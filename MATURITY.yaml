@@ -9,7 +9,7 @@ positioning: reference-accelerator
 updated: 2026-07-09
 
 tests:
-  offline_total: 270                          # collected-test count; verified by tools/check_maturity.py
+  offline_total: 270                          # Canonical offline suite: 270 collected & passing, 0 skipped — verified 2026-07-12 by `bash scripts/run_tests.sh` (per-suite isolation); machine-checked by tools/check_maturity.py. MATURITY.yaml is the single source of truth.
   reproduce: "make test   # scripts/run_tests.sh — per-agent isolation (--import-mode=importlib), no API key"
   last_verified: 2026-07-10
 

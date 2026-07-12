@@ -39,7 +39,7 @@ pools remain. Residuals: the WORM bucket (deliberate, §2) and the shared SAM ar
 ## 5. Scope note
 
 This report covers the hardened Agent 01 golden path — the canonical deployment path. Agents
-02–08 share the same platform controls (offline-tested, 185 tests green as of 2026-07-07) and
+02–08 share the same platform controls (offline-tested; part of the 270-test suite — see MATURITY.yaml) and
 deploy via the alternative nested-stack reference, which has not been through this acceptance
 gate. See the README capability maturity matrix.
 
